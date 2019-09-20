@@ -11,7 +11,7 @@ import os
 from sklearn.utils import shuffle
 import sys
 
-test_times = 4
+time = 5
 
 # Load data
 X = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
@@ -22,6 +22,11 @@ Y = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
 
 X_train = X.reshape(X.shape[0], X.shape[1], X.shape[2])
 
+X_test = np.load(‪'D:/Bitcamp/BitProject/npy/lsm_x.npy')
+Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy')
+
+X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], X_test.shape[2])
+
 # Shuffle
 X, Y = shuffle(X, Y, random_state = 66)
 
@@ -29,7 +34,8 @@ X, Y = shuffle(X, Y, random_state = 66)
 height = X.shape[1]
 width = X.shape[2]
 channels = X.shape[3]
-latent_dimension = int(math.sqrt(height * width))
+latent_dimension = int((height + width) / 2)
+# latent_dimension = int(math.sqrt(height * width))
 
 # print(height) # 28
 # print(width) # 28
@@ -37,6 +43,7 @@ latent_dimension = int(math.sqrt(height * width))
 # print(latent_dimension) # 28
 
 optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
+epochs = X.shape[0]
 
 def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
@@ -80,16 +87,17 @@ class DCGAN():
         model.add(Dense(128 * 7 * 7, activation = paramertic_relu('zeros', None, None, None), input_dim = self.latent_dimension))
         model.add(Reshape((7, 7, 128)))
         model.add(UpSampling2D())
-        model.add(Conv2D(128, kernel_size = (3, 3), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
+        model.add(Conv2D(128, kernel_size = (3, 3), strides = 1, padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.5))
         # model.add(Activation('relu'))
         model.add(Activation(paramertic_relu('zeros', None, None, [1, 2])))
         model.add(UpSampling2D())
-        model.add(Conv2D(64, kernel_size = (3, 3), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
+        model.add(Conv2D(64, kernel_size = (3, 3), strides = 1, padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.5))
         # model.add(Activation('relu'))
         model.add(Activation(paramertic_relu('zeros', None, None, [1, 2])))
-        model.add(Conv2D(self.channels, kernel_size = (3, 3), padding = 'same'))
+        # model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = 1, padding = 'same'))
+        model.add(Conv2D(self.channels, kernel_size = (9, 9), strides = 1, padding = 'same'))
         model.add(Activation('tanh'))
 
         # model.summary()
@@ -105,16 +113,19 @@ class DCGAN():
         model.add(Conv2D(32, kernel_size = 3, strides = 2, input_shape = (self.height, self.width, self.channels), padding = 'same'))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(64, kernel_size = (3, 3), strides = 2, padding = 'same'))
+        # model.add(Conv2D(64, kernel_size = (3, 3), strides = 2, padding = 'same'))
+        model.add(Conv2D(64, kernel_size = (3, 3), strides = 1, padding = 'same'))
         model.add(ZeroPadding2D(padding=((0, 1),(0, 1))))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (3, 3), strides = 2, padding = 'same'))
+        # model.add(Conv2D(128, kernel_size = (3, 3), strides = 2, padding = 'same'))
+        model.add(Conv2D(128, kernel_size = (3, 3), strides = 1, padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = 2, padding = 'same'))
+        # model.add(Conv2D(256, kernel_size = (3, 3), strides = 2, padding = 'same'))
+        model.add(Conv2D(256, kernel_size = (3, 3), strides = 1, padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
@@ -131,11 +142,13 @@ class DCGAN():
     def train(self, epochs, batch_size = 128, save_interval = 50):
         # Rescale -1 to 1
         Y_train = Y / 127.5 - 1.
-        # Y_train = np.expand_dims(Y_train, axis=3)
+        # Y_train = np.expand_dims(Y_train, axis = 3)
 
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
         real = np.ones((batch_size, 1))
+
+        print('Training')
 
         for i in range(epochs):
             # Select a random half of images
@@ -156,13 +169,51 @@ class DCGAN():
             generator_loss = self.combined.train_on_batch(x_train, real)
             
             # Plot the progress
-            print ("%d [Loss of discriminator : %f, Accuracy : %.2f%%] [Loss of generator : %f]" % (i, discriminator_loss[0], 100 * discriminator_loss[1], generator_loss))
+            print ('Epoch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f' % (i, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
             # If at save interval -> save generated image samples
             if i % save_interval == 0:
-                self.save_image(i)
+                save_path = 'D:/Train' + str(time) + '/'
+                self.save_image(i, save_path)
+
+    def test(self, epochs, batch_size = 128, save_interval = 50):
+        # Rescale -1 to 1
+        y_test = Y_test / 127.5 - 1.
+        # Y_test = np.expand_dims(Y_test, axis = 3)
+
+        # Adversarial ground truths
+        fake = np.zeros((batch_size, 1))
+        real = np.ones((batch_size, 1))
+
+        print('Testing')
+
+        for i in range(epochs):
+            # Select a random half of images
+            index = np.random.randint(0, y_test.shape[0], batch_size)
+            front_image = y_test[index]
+
+            # Sample noise and generate a batch of new images
+            x_test = X_test[i]
+
+            generated_image = self.generator.predict(x_test)
+
+            # Train the discriminator (real classified as ones and generated as zeros)
+            discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
+            discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
+            discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
+
+            # Train the generator (wants discriminator to mistake images as real)
+            generator_loss = self.combined.train_on_batch(x_test, real)
+            
+            # Plot the progress
+            print ('Epoch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f' % (i, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+
+            # If at save interval -> save generated image samples
+            if i % save_interval == 0:
+                save_path = 'D:/Test' + str(time) + '/'
+                self.save_image(i, save_path)
       
-    def save_image(self, number):
+    def save_image(self, number, save_path):
         row, column = 5, 5
 
         # generated_image = self.generator.predict(X_train[number])
@@ -182,16 +233,18 @@ class DCGAN():
                 
         # plt.show()
 
-        save_path = 'D:/Test' + str(test_times) + '/'
+        save_path = save_path
 
         # Check folder presence
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
-        save_filename = '%d.png' % number
-        save_filename = os.path.join(save_path, save_filename)
-        figure.savefig(save_filename)
+        save_image = '%d.png' % number
+        save_image = os.path.join(save_path, save_image)
+        figure.savefig(save_image)
         plt.close()
 
 if __name__ == '__main__':
     dcgan = DCGAN()
-    dcgan.train(epochs = 5400, batch_size = 28, save_interval = 1)
+    # dcgan.train(epochs = epochs, batch_size = 28, save_interval = 1)
+    dcgan.train(epochs = 1, batch_size = 28, save_interval = 1)
+    dcgan.test(epochs = 1, batch_size = 28, save_interval = 1)
