@@ -59,7 +59,8 @@ latent_dimension = int((height + width) / 2)
 # print(latent_dimension) # 28
 
 optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
-epochs = X.shape[0]
+train_epochs = X.shape[0]
+test_epochs = X_train.shape[0]
 
 def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
@@ -261,6 +262,5 @@ class DCGAN():
 
 if __name__ == '__main__':
     dcgan = DCGAN()
-    # dcgan.train(epochs = epochs, batch_size = 28, save_interval = 1)
-    dcgan.train(epochs = 5400, batch_size = 28, save_interval = 1)
-    dcgan.test(epochs = 1, batch_size = 28, save_interval = 1)
+    dcgan.train(epochs = train_epochs, batch_size = 28, save_interval = 1)
+    dcgan.test(epochs = test_epochs, batch_size = 28, save_interval = 1)
