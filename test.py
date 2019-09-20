@@ -17,15 +17,31 @@ time = 5
 X = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
 Y = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
 
+
 # print(X.shape) # (5400, 28, 28, 1)
 # print(Y.shape) # (5400, 28, 28, 1)
 
 X_train = X.reshape(X.shape[0], X.shape[1], X.shape[2])
 
-X_test = np.load(‪'D:/Bitcamp/BitProject/npy/lsm_x.npy')
-Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy')
+X_test = np.load('D:/Bitcamp/BitProject/npy/lsm_x.npy')
+# Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy')
+Y_test_path = '‪D:/Bitcamp/BitProject/npy/lsm_y.npy'
+Y_test = np.load(Y_test_path.split("\u202a")[1])
+
+X_test_list = [] #
+Y_test_list = [] #
+
+for i in range(28): #
+    X_test_list.append(X_test) #
+    Y_test_list.append(Y_test) #
+
+X_test = np.array(X_test_list) #
+Y_test = np.array(Y_test_list) #
 
 X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], X_test.shape[2])
+
+# print(X_test.shape) # (28, 28, 28)
+# print(Y_test.shape) # (28, 28, 28, 1)
 
 # Shuffle
 X, Y = shuffle(X, Y, random_state = 66)
@@ -246,5 +262,5 @@ class DCGAN():
 if __name__ == '__main__':
     dcgan = DCGAN()
     # dcgan.train(epochs = epochs, batch_size = 28, save_interval = 1)
-    dcgan.train(epochs = 1, batch_size = 28, save_interval = 1)
+    dcgan.train(epochs = 5400, batch_size = 28, save_interval = 1)
     dcgan.test(epochs = 1, batch_size = 28, save_interval = 1)
