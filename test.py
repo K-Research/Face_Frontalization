@@ -6,7 +6,10 @@ from keras.models import Model, Sequential
 from keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import sys
+
+test_times = 1
 
 # Load data
 X = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
@@ -20,8 +23,13 @@ X_train = X.reshape(X.shape[0], X.shape[1], X.shape[2])
 # Prameters
 height = X.shape[1]
 width = X.shape[2]
-channel = X.shape[3]
-latent_dimension = 28
+channels = X.shape[3]
+latent_dimension = int(np.mean(height + width))
+
+# print(height) # 28
+# print(width) # 28
+# print(channels) # 1
+# print(latent_dimension) # 28
 
 optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 '''
@@ -33,8 +41,8 @@ class DCGAN():
     def __init__(self):
         self.height = height
         self.width = width
-        self.channel = channel
-        self.image_shape = (self.height, self.width, self.channel)
+        self.channels = channels
+        # self.image_shape = (self.height, self.width, self.channels)
         self.latent_dimension = latent_dimension
 
         self.optimizer = optimizer
@@ -64,20 +72,17 @@ class DCGAN():
     def build_generator(self):
         model = Sequential()
 
-        # model.add(Dense(128 * 7 * 7, activation = LeakyReLU, input_dim = self.latent_dimension))
         model.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
         model.add(Reshape((7, 7, 128)))
         model.add(UpSampling2D())
         model.add(Conv2D(128, kernel_size = (3, 3), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation(LeakyReLU))
         model.add(Activation('relu'))
         model.add(UpSampling2D())
         model.add(Conv2D(64, kernel_size = (3, 3), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation(LeakyReLU))
         model.add(Activation('relu'))
-        model.add(Conv2D(self.channel, kernel_size = (3, 3), padding = 'same'))
+        model.add(Conv2D(self.channels, kernel_size = (3, 3), padding = 'same'))
         model.add(Activation('tanh'))
 
         # model.summary()
@@ -90,19 +95,19 @@ class DCGAN():
     def build_discriminator(self):
         model = Sequential()
 
-        model.add(Conv2D(32, kernel_size = 3, strides = 1, input_shape = self.image_shape, padding = 'same'))
+        model.add(Conv2D(32, kernel_size = 3, strides = 2, input_shape = (self.height, self.width, self.channels), padding = 'same'))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(64, kernel_size = (3, 3), strides = 1, padding = 'same'))
+        model.add(Conv2D(64, kernel_size = (3, 3), strides = 2, padding = 'same'))
         model.add(ZeroPadding2D(padding=((0, 1),(0, 1))))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (3, 3), strides = 1, padding = 'same'))
+        model.add(Conv2D(128, kernel_size = (3, 3), strides = 2, padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = 1, padding = 'same'))
+        model.add(Conv2D(256, kernel_size = (3, 3), strides = 2, padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
@@ -111,7 +116,7 @@ class DCGAN():
 
         # model.summary()
 
-        image = Input(shape = self.image_shape)
+        image = Input(shape = (self.height, self.width, self.channels))
         validity = model(image)
 
         return Model(image, validity)
@@ -128,21 +133,20 @@ class DCGAN():
         for i in range(epochs):
             # Select a random half of images
             index = np.random.randint(0, Y_train.shape[0], batch_size)
-            image = Y_train[index]
+            front_image = Y_train[index]
 
             # Sample noise and generate a batch of new images
-            # noise = np.random.normal(0, 1, (batch_size, self.latent_dimension))
             x_train = X_train[i]
 
             generated_image = self.generator.predict(x_train)
 
             # Train the discriminator (real classified as ones and generated as zeros)
-            # discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
-            # discriminator_real_loss = self.discriminator.train_on_batch(image, real)
-            # discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
-            discriminator_real_loss = self.discriminator.train_on_batch(image, real)
             discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
-            discriminator_loss = 0.5 * np.add(discriminator_real_loss, discriminator_fake_loss)
+            discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
+            discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
+            # discriminator_real_loss = self.discriminator.train_on_batch(image, real)
+            # discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
+            # discriminator_loss = 0.5 * np.add(discriminator_real_loss, discriminator_fake_loss)
 
             # Train the generator (wants discriminator to mistake images as real)
             generator_loss = self.combined.train_on_batch(x_train, real)
@@ -156,13 +160,14 @@ class DCGAN():
       
     def save_image(self, number):
         row, column = 5, 5
-        # noise = np.random.normal(0, 1, (row * column, self.latent_dimension))
-        generated_image = self.generator.predict(X_train[number])
+
+        # generated_image = self.generator.predict(X_train[number])
 
         # Rescale images 0 - 1
-        generated_image = 0.5 * generated_image + 0.5
+        generated_image = 0.5 * self.generator.predict(X_train[number]) + 0.5
 
         figure, axis = plt.subplots(row, column)
+
         count = 0
 
         for j in range(row):
@@ -171,7 +176,14 @@ class DCGAN():
                 axis[j, k].axis('off')
                 count += 1
 
-        figure.savefig('D:/Test/%d.png' % number)
+        save_path = 'D:/Test' + str(test_times) + '/'
+
+        # Check folder presence
+        if not os.path.isdir(save_path):
+            os.makedirs(save_path)
+        save_filename = '%d.png' % number
+        save_filename = os.path.join(save_path, save_filename)
+        figure.savefig(save_filename)
         plt.close()
 
 if __name__ == '__main__':
