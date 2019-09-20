@@ -1,15 +1,17 @@
 from __future__ import print_function, division
 
 from keras.layers import Activation, BatchNormalization,Conv2D, Dense, Dropout, Flatten, Input, Reshape, UpSampling2D, ZeroPadding2D
-from keras.layers.advanced_activations import LeakyReLU
+from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
-from keras.optimizers import Adam
+from keras.optimizers import Adam, Nadam
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from sklearn.utils import shuffle
 import sys
 
-test_times = 1
+test_times = 4
 
 # Load data
 X = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
@@ -20,11 +22,14 @@ Y = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
 
 X_train = X.reshape(X.shape[0], X.shape[1], X.shape[2])
 
+# Shuffle
+X, Y = shuffle(X, Y, random_state = 66)
+
 # Prameters
 height = X.shape[1]
 width = X.shape[2]
 channels = X.shape[3]
-latent_dimension = int(np.mean(height + width))
+latent_dimension = int(math.sqrt(height * width))
 
 # print(height) # 28
 # print(width) # 28
@@ -32,11 +37,10 @@ latent_dimension = int(np.mean(height + width))
 # print(latent_dimension) # 28
 
 optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
-'''
-# Shuffle
-from sklearn.utils import shuffle
-X, Y = shuffle(X, Y, random_state = 66)
-'''
+
+def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
+    PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
+
 class DCGAN():
     def __init__(self):
         self.height = height
@@ -72,16 +76,19 @@ class DCGAN():
     def build_generator(self):
         model = Sequential()
 
-        model.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
+        # model.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
+        model.add(Dense(128 * 7 * 7, activation = paramertic_relu('zeros', None, None, None), input_dim = self.latent_dimension))
         model.add(Reshape((7, 7, 128)))
         model.add(UpSampling2D())
         model.add(Conv2D(128, kernel_size = (3, 3), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation('relu'))
+        # model.add(Activation('relu'))
+        model.add(Activation(paramertic_relu('zeros', None, None, [1, 2])))
         model.add(UpSampling2D())
         model.add(Conv2D(64, kernel_size = (3, 3), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation('relu'))
+        # model.add(Activation('relu'))
+        model.add(Activation(paramertic_relu('zeros', None, None, [1, 2])))
         model.add(Conv2D(self.channels, kernel_size = (3, 3), padding = 'same'))
         model.add(Activation('tanh'))
 
@@ -144,9 +151,6 @@ class DCGAN():
             discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
             discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
             discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
-            # discriminator_real_loss = self.discriminator.train_on_batch(image, real)
-            # discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
-            # discriminator_loss = 0.5 * np.add(discriminator_real_loss, discriminator_fake_loss)
 
             # Train the generator (wants discriminator to mistake images as real)
             generator_loss = self.combined.train_on_batch(x_train, real)
@@ -165,7 +169,7 @@ class DCGAN():
 
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(X_train[number]) + 0.5
-
+        
         figure, axis = plt.subplots(row, column)
 
         count = 0
@@ -175,6 +179,8 @@ class DCGAN():
                 axis[j, k].imshow(generated_image[count, :  , :  , 0], cmap = 'gray')
                 axis[j, k].axis('off')
                 count += 1
+                
+        # plt.show()
 
         save_path = 'D:/Test' + str(test_times) + '/'
 
