@@ -11,11 +11,11 @@ import os
 from sklearn.utils import shuffle
 import sys
 
-time = 5
+time = 1
 
 # Load data
-X = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
-Y = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
+X = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/x.npy') # Side face
+Y = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/y.npy') # Front face
 
 
 # print(X.shape) # (5400, 28, 28, 1)
@@ -23,9 +23,9 @@ Y = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
 
 X_train = X.reshape(X.shape[0], X.shape[1], X.shape[2])
 
-X_test = np.load('D:/Bitcamp/BitProject/npy/lsm_x.npy')
-# Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy')
-Y_test_path = '‪D:/Bitcamp/BitProject/npy/lsm_y.npy'
+X_test = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_x.npy')
+# Y_test = np.load('‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy')
+Y_test_path = '‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy'
 Y_test = np.load(Y_test_path.split("\u202a")[1])
 
 X_test_list = [] #
@@ -101,18 +101,18 @@ class DCGAN():
         model = Sequential()
 
         model.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
-        # model.add(Dense(128 * 7 * 7, activation = paramertic_relu('zeros', None, None, None), input_dim = self.latent_dimension))
+        # model.add(Dense(128 * 7 * 7, activation = paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = None), input_dim = self.latent_dimension))
         model.add(Reshape((7, 7, 128)))
         model.add(UpSampling2D())
         model.add(Conv2D(128, kernel_size = (3, 3), strides = 1, padding = 'same'))
         model.add(BatchNormalization(momentum = 0.5))
         model.add(Activation('relu'))
-        # model.add(Activation(paramertic_relu('zeros', None, None, [1, 2])))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(UpSampling2D())
         model.add(Conv2D(64, kernel_size = (3, 3), strides = 1, padding = 'same'))
         model.add(BatchNormalization(momentum = 0.5))
         model.add(Activation('relu'))
-        # model.add(Activation(paramertic_relu('zeros', None, None, [1, 2])))
+        # model.add(Activation(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = 1, padding = 'same'))
         # model.add(Conv2D(self.channels, kernel_size = (9, 9), strides = 1, padding = 'same'))
         model.add(Activation('tanh'))
@@ -156,7 +156,7 @@ class DCGAN():
 
         return Model(image, validity)
 
-    def train(self, epochs, batch_size = 128, save_interval = 50):
+    def train(self, epochs, batch_size, save_interval):
         # Rescale -1 to 1
         Y_train = Y / 127.5 - 1.
         # Y_train = np.expand_dims(Y_train, axis = 3)
@@ -186,14 +186,14 @@ class DCGAN():
             generator_loss = self.combined.train_on_batch(x_train, real)
             
             # Plot the progress
-            print ('Epoch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f' % (i, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+            print ('Training epoch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f' % (i, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
             # If at save interval -> save generated image samples
             if i % save_interval == 0:
-                save_path = 'D:/Train' + str(time) + '/'
+                save_path = 'D:/Training' + str(time) + '/'
                 self.save_image(i, save_path)
 
-    def test(self, epochs, batch_size = 128, save_interval = 50):
+    def test(self, epochs, batch_size, save_interval):
         # Rescale -1 to 1
         y_test = Y_test / 127.5 - 1.
         # Y_test = np.expand_dims(Y_test, axis = 3)
@@ -204,7 +204,7 @@ class DCGAN():
 
         print('Testing')
 
-        for i in range(epochs):
+        for i in range(epochs - 1):
             # Select a random half of images
             index = np.random.randint(0, y_test.shape[0], batch_size)
             front_image = y_test[index]
@@ -215,19 +215,19 @@ class DCGAN():
             generated_image = self.generator.predict(x_test)
 
             # Train the discriminator (real classified as ones and generated as zeros)
-            discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
-            discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
+            discriminator_fake_loss = self.discriminator.test_on_batch(generated_image, fake)
+            discriminator_real_loss = self.discriminator.test_on_batch(front_image, real)
             discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
 
             # Train the generator (wants discriminator to mistake images as real)
-            generator_loss = self.combined.train_on_batch(x_test, real)
+            generator_loss = self.combined.test_on_batch(x_test, real)
             
             # Plot the progress
-            print ('Epoch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f' % (i, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+            print ('Test epoch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f' % (i, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
             # If at save interval -> save generated image samples
             if i % save_interval == 0:
-                save_path = 'D:/Test' + str(time) + '/'
+                save_path = 'D:/Testing' + str(time) + '/'
                 self.save_image(i, save_path)
       
     def save_image(self, number, save_path):
