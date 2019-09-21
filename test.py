@@ -60,7 +60,7 @@ latent_dimension = int((height + width) / 2)
 
 optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 train_epochs = X.shape[0]
-test_epochs = X_train.shape[0]
+test_epochs = X_test.shape[0]
 
 def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
@@ -204,7 +204,7 @@ class DCGAN():
 
         print('Testing')
 
-        for i in range(epochs - 1):
+        for i in range(epochs):
             # Select a random half of images
             index = np.random.randint(0, y_test.shape[0], batch_size)
             front_image = y_test[index]
