@@ -123,7 +123,7 @@ class DCGAN():
         model.add(BatchNormalization(momentum = 0.5))
         model.add(Activation('relu'))
         # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(UpSampling2D())
+        # model.add(UpSampling2D())
         model.add(Conv2D(64, kernel_size = (3, 3), strides = 1, padding = 'same'))
         model.add(BatchNormalization(momentum = 0.5))
         model.add(Activation('relu'))
@@ -178,20 +178,23 @@ class DCGAN():
         # Y_train = np.expand_dims(Y_train, axis = 3)
 
         # Adversarial ground truths
-        fake = np.zeros((batch_size, 1))
-        real = np.ones((batch_size, 1))
+        # fake = np.zeros((batch_size, 1))
+        # real = np.ones((batch_size, 1))
+        fake = np.zeros((X.shape[0], 1)) #
+        real = np.ones((X.shape[0], 1)) #
 
         print('Training')
 
         for i in range(epochs):
             # Select a random half of images
             index = np.random.randint(0, Y_train.shape[0], batch_size)
-            front_image = Y_train[index]
+            # front_image = Y_train[index]
+            front_image = Y_train
 
             # Sample noise and generate a batch of new images
             # side_image = X_train[i]
             side_image = X_train #
-
+            
             generated_image = self.generator.predict(side_image)
 
             # Train the discriminator (real classified as ones and generated as zeros)
@@ -217,15 +220,18 @@ class DCGAN():
         # Y_test = np.expand_dims(Y_test, axis = 3)
 
         # Adversarial ground truths
-        fake = np.zeros((batch_size, 1))
-        real = np.ones((batch_size, 1))
+        # fake = np.zeros((batch_size, 1))
+        # real = np.ones((batch_size, 1))
+        fake = np.zeros((X_test.shape[0], 1)) #
+        real = np.ones((X_test.shape[0], 1)) #
 
         print('Testing')
 
         for j in range(epochs):
             # Select a random half of images
             index = np.random.randint(0, y_test.shape[0], batch_size)
-            front_image = y_test[index]
+            # front_image = y_test[index]
+            front_image = y_test #
 
             # Sample noise and generate a batch of new images
             # side_image = X_test[j]
