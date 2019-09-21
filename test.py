@@ -14,8 +14,14 @@ import sys
 time = 1
 
 # Load data
-X = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/x.npy') # Side face
-Y = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/y.npy') # Front face
+# X = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/x.npy') # Side face
+# Y = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/y.npy') # Front face
+X = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
+Y = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
+
+from sklearn.model_selection import train_test_split
+
+X, _, Y, _ = train_test_split(X, Y, train_size = 0.5)
 
 
 # print(X.shape) # (5400, 28, 28, 1)
@@ -24,10 +30,15 @@ Y = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/y.npy') # Front face
 # X_train = X.reshape(X.shape[0], X.shape[1], X.shape[2])
 X_train = X
 
-X_test = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_x.npy')
-# Y_test = np.load('‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy')
-Y_test_path = '‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy'
+# X_test = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_x.npy')
+# # Y_test = np.load('‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy')
+# Y_test_path = '‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy'
+# Y_test = np.load(Y_test_path.split("\u202a")[1])
+X_test = np.load('D:/Bitcamp/BitProject/npy/lsm_x.npy')
+# Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy')
+Y_test_path = '‪D:/Bitcamp/BitProject/npy/lsm_y.npy'
 Y_test = np.load(Y_test_path.split("\u202a")[1])
+
 
 X_test_list = [] #
 Y_test_list = [] #
@@ -180,8 +191,8 @@ class DCGAN():
         # Adversarial ground truths
         # fake = np.zeros((batch_size, 1))
         # real = np.ones((batch_size, 1))
-        fake = np.zeros((X.shape[0], 1)) #
-        real = np.ones((X.shape[0], 1)) #
+        fake = np.zeros((X_train.shape[0], 1)) #
+        real = np.ones((X_train.shape[0], 1)) #
 
         print('Training')
 
@@ -263,6 +274,7 @@ class DCGAN():
 
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(X_train[number]) + 0.5
+        print(generated_image.shape)
         
         # figure, axis = plt.subplots(1, 2)
 
@@ -270,7 +282,7 @@ class DCGAN():
 
         # for j in range(row):
         #     for k in range(column):
-        #         axis[j, k].imshow(generated_image[count, :  , :  , 0], cmap = 'gray')
+        #         axis[j, k].imshow(generated_image[count,  :  , :  , 0], cmap = 'gray')
         #         axis[j, k].axis('off')
         #         count += 1
                 
@@ -281,7 +293,7 @@ class DCGAN():
         for k in range(n_image):
             generated_image_plot = plt.subplot(1, 3, k + 1 + n_image)
             generated_image_plot.set_title('Generated image (front image)')
-            plt.show(generated_image[k])
+            plt.show(generated_image[k].reshape(height, width))
 
             original_front_image_plot = plt.subplot(1, 3, k + 1 + (n_image * 2))
             original_front_image_plot.set_title('Origninal side image')
