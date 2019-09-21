@@ -14,15 +14,14 @@ import sys
 time = 1
 
 # Load data
-# X = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/x.npy') # Side face
-# Y = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/y.npy') # Front face
-X = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
-Y = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
+X = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/x.npy') # Side face
+Y = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/y.npy') # Front face
+# X = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
+# Y = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
 
 from sklearn.model_selection import train_test_split
 
-X, _, Y, _ = train_test_split(X, Y, train_size = 0.5)
-
+X, _, Y, _ = train_test_split(X, Y, train_size = 0.1)
 
 # print(X.shape) # (5400, 28, 28, 1)
 # print(Y.shape) # (5400, 28, 28, 1)
@@ -30,15 +29,14 @@ X, _, Y, _ = train_test_split(X, Y, train_size = 0.5)
 # X_train = X.reshape(X.shape[0], X.shape[1], X.shape[2])
 X_train = X
 
-# X_test = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_x.npy')
-# # Y_test = np.load('‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy')
-# Y_test_path = '‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy'
-# Y_test = np.load(Y_test_path.split("\u202a")[1])
-X_test = np.load('D:/Bitcamp/BitProject/npy/lsm_x.npy')
-# Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy')
-Y_test_path = '‪D:/Bitcamp/BitProject/npy/lsm_y.npy'
+X_test = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_x.npy')
+# Y_test = np.load('‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy')
+Y_test_path = '‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy'
 Y_test = np.load(Y_test_path.split("\u202a")[1])
-
+# X_test = np.load('D:/Bitcamp/BitProject/npy/lsm_x.npy')
+# # Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy')
+# Y_test_path = '‪D:/Bitcamp/BitProject/npy/lsm_y.npy'
+# Y_test = np.load(Y_test_path.split("\u202a")[1])
 
 X_test_list = [] #
 Y_test_list = [] #
@@ -273,8 +271,9 @@ class DCGAN():
         # generated_image = self.generator.predict(X_train[number])
 
         # Rescale images 0 - 1
+        print('X_train : ', X_train.shape)
+        print('X_train[number] : ', X_train[number].shape)
         generated_image = 0.5 * self.generator.predict(X_train[number]) + 0.5
-        print(generated_image.shape)
         
         # figure, axis = plt.subplots(1, 2)
 
