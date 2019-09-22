@@ -14,14 +14,14 @@ import sys
 time = 1
 
 # Load data
-# X = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/x.npy') # Side face
-# Y = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/y.npy') # Front face
-X = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
-Y = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
+X = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/x.npy') # Side face
+Y = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/y.npy') # Front face
+# X = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
+# Y = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
 
 from sklearn.model_selection import train_test_split
 
-X, _, Y, _ = train_test_split(X, Y, train_size = 0.00518518518518518518518518518519)
+X, _, Y, _ = train_test_split(X, Y, train_size = 0.00518518518518518518518518518519) # (28, 28, 28, 1)
 
 # print(X.shape) # (5400, 28, 28, 1)
 # print(Y.shape) # (5400, 28, 28, 1)
@@ -29,14 +29,14 @@ X, _, Y, _ = train_test_split(X, Y, train_size = 0.00518518518518518518518518518
 # X_train = X.reshape(X.shape[0], X.shape[1], X.shape[2])
 X_train = X
 
-# X_test = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_x.npy')
+X_test = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_x.npy')
 # Y_test = np.load('‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy')
-# Y_test_path = '‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy'
-# Y_test = np.load(Y_test_path.split("\u202a")[1])
-X_test = np.load('D:/Bitcamp/BitProject/npy/lsm_x.npy')
-# Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy')
-Y_test_path = '‪D:/Bitcamp/BitProject/npy/lsm_y.npy'
+Y_test_path = '‪D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/lsm_y.npy'
 Y_test = np.load(Y_test_path.split("\u202a")[1])
+# X_test = np.load('D:/Bitcamp/BitProject/npy/lsm_x.npy')
+# # Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy')
+# Y_test_path = '‪D:/Bitcamp/BitProject/npy/lsm_y.npy'
+# Y_test = np.load(Y_test_path.split("\u202a")[1])
 
 X_test_list = [] #
 Y_test_list = [] #
@@ -105,8 +105,7 @@ class DCGAN():
         self.generator = self.build_generator()
 
         # The generator takes noise as input and generates imgs
-        # z = Input(shape = (self.latent_dimension, ))
-        z = Input(shape = (self.height, self.width, self.channels, )) #
+        z = Input(shape = (self.height, self.width, self.channels, ))
         image = self.generator(z)
 
         # For the combined model we will only train the generator
@@ -124,7 +123,6 @@ class DCGAN():
         model = Sequential()
 
         model.add(Conv2D(128, kernel_size = (3, 3), strides = 1, padding = 'same', input_shape = (self.height, self.width, self.channels)))
-        # model.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
         # # model.add(Dense(128 * 7 * 7, activation = paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = None), input_dim = self.latent_dimension))
         # model.add(Reshape((7, 7, 128)))
         # model.add(UpSampling2D())
@@ -196,12 +194,9 @@ class DCGAN():
 
         for i in range(epochs):
             # Select a random half of images
-            index = np.random.randint(0, Y_train.shape[0], batch_size)
-            # front_image = Y_train[index]
             front_image = Y_train
 
             # Sample noise and generate a batch of new images
-            # side_image = X_train[i]
             side_image = X_train #
             
             generated_image = self.generator.predict(side_image)
@@ -238,13 +233,10 @@ class DCGAN():
 
         for j in range(epochs):
             # Select a random half of images
-            index = np.random.randint(0, y_test.shape[0], batch_size)
-            # front_image = y_test[index]
-            front_image = y_test #
+            front_image = y_test 
 
             # Sample noise and generate a batch of new images
-            # side_image = X_test[j]
-            side_image = X_test #
+            side_image = X_test 
 
             generated_image = self.generator.predict(side_image)
 
@@ -266,55 +258,45 @@ class DCGAN():
                 self.save_image(number = j, front_image = front_image, side_image = side_image, save_path = save_path)
       
     def save_image(self, number, front_image, side_image, save_path):
-        # row, column = 5, 5
-
         # Rescale images 0 - 1
-        print('X_train : ', X_train.shape)
-        print('X_train[number] : ', X_train[number].shape)
         # generated_image = 0.5 * self.generator.predict(X_train[number]) + 0.5
-        generated_image = 0.5 * self.generator.predict(X_train) + 0.5
-        
-        # figure, axis = plt.subplots(1, 2)
+        generated_image = 0.5 * self.generator.predict(X_train) + 0.5 #
 
-        # count = 0
-
-        # for j in range(row):
-        #     for k in range(column):
-        #         axis[j, k].imshow(generated_image[count,  :  , :  , 0], cmap = 'gray')
-        #         axis[j, k].axis('off')
-        #         count += 1
-                
-        # plt.show()
+        plt.figure(figsize = (20, 5))
 
         # Show image (first row : original side image, second row : original front image, third row = generated image(front image))
-
         for k in range(n_image):
             generated_image_plot = plt.subplot(1, 3, k + 1 + n_image)
             generated_image_plot.set_title('Generated image (front image)')
-            plt.show(generated_image[k].reshape(height, width))
+            plt.imshow(generated_image[k,  :  , :  , 0], cmap = 'gray')
 
-            original_front_image_plot = plt.subplot(1, 3, k + 1 + (n_image * 2))
-            original_front_image_plot.set_title('Origninal side image')
-            plt.imshow(front_image[k].reshape(height, width))
 
-            print(side_image[k].shape)
-            original_side_image_plot = plt.subplot(1, 3, k + 1)
-            original_side_image_plot.set_title('Origninal front image')
-            plt.imshow(side_image[k])
+            original_front_face_image_plot = plt.subplot(1, 3, k + 1 + (n_image * 2))
+            original_front_face_image_plot.set_title('Origninal side image')
+            plt.imshow(front_image[k].reshape(height, width), cmap = 'gray')
+
+            original_side_face_image_plot = plt.subplot(1, 3, k + 1)
+            original_side_face_image_plot.set_title('Origninal front image')
+            plt.imshow(side_image[k].reshape(height, width), cmap = 'gray')
 
             # Don't show axis of x and y
             generated_image_plot.axis('off')
-            original_front_image_plot.axis('off')
-            original_side_image_plot.axis('off')
+            original_front_face_image_plot.axis('off')
+            original_side_face_image_plot.axis('off')
+
+            # Adjust the interval of the image
+            plt.subplots_adjust(wspace = 5)
+
+            plt.show()
 
         save_path = save_path
 
         # Check folder presence
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
-        save_image = '%d.png' % number
-        save_image = os.path.join(save_path, save_image)
-        figure.savefig(save_image)
+        save_name = '%d.png' % number
+        save_name = os.path.join(save_path, save_name)
+        plt.savefig(save_name)
         plt.close()
 
 if __name__ == '__main__':
