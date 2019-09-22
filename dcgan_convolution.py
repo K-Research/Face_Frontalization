@@ -262,16 +262,18 @@ class DCGAN():
         # generated_image = 0.5 * self.generator.predict(X_train[number]) + 0.5
         generated_image = 0.5 * self.generator.predict(X_train) + 0.5 #
 
-        plt.figure(figsize = (20, 5))
+        plt.figure(figsize = (8, 2))
 
-        # Show image (first row : original side image, second row : original front image, third row = generated image(front image))
+        # Adjust the interval of the image
+        plt.subplots_adjust(wspace = 0.6)
+
+        # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
         for k in range(n_image):
-            generated_image_plot = plt.subplot(1, 3, k + 1 + n_image)
+            generated_image_plot = plt.subplot(1, 3, k + 1 + (n_image * 2))
             generated_image_plot.set_title('Generated image (front image)')
             plt.imshow(generated_image[k,  :  , :  , 0], cmap = 'gray')
 
-
-            original_front_face_image_plot = plt.subplot(1, 3, k + 1 + (n_image * 2))
+            original_front_face_image_plot = plt.subplot(1, 3, k + 1 + n_image)
             original_front_face_image_plot.set_title('Origninal side image')
             plt.imshow(front_image[k].reshape(height, width), cmap = 'gray')
 
@@ -283,9 +285,6 @@ class DCGAN():
             generated_image_plot.axis('off')
             original_front_face_image_plot.axis('off')
             original_side_face_image_plot.axis('off')
-
-            # Adjust the interval of the image
-            plt.subplots_adjust(wspace = 5)
 
             plt.show()
 
@@ -301,7 +300,5 @@ class DCGAN():
 
 if __name__ == '__main__':
     dcgan = DCGAN()
-    # dcgan.train(epochs = train_epochs, batch_size = 28, save_interval = 1)
-    dcgan.train(epochs = 1, batch_size = latent_dimension(), save_interval = train_save_interval)
-    # dcgan.test(epochs = test_epochs, batch_size = 28, save_interval = 1)
-    dcgan.test(epochs = 1, batch_size = latent_dimension(), save_interval = test_save_interval)
+    dcgan.train(epochs = train_epochs, batch_size = 28, save_interval = 1)
+    dcgan.test(epochs = test_epochs, batch_size = 28, save_interval = 1)
