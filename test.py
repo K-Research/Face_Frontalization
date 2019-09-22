@@ -21,7 +21,7 @@ Y = np.load('D:/Taehwan Kim/Document/Bitcamp/BitProject/npy/y.npy') # Front face
 
 from sklearn.model_selection import train_test_split
 
-X, _, Y, _ = train_test_split(X, Y, train_size = 0.1)
+X, _, Y, _ = train_test_split(X, Y, train_size = 0.00518518518518518518518518518519) # (28, 28, 28, 1)
 
 # print(X.shape) # (5400, 28, 28, 1)
 # print(Y.shape) # (5400, 28, 28, 1)
