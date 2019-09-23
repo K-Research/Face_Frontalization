@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 import sys
 
 n_test_image = 2
-time = 6
+time = 7
 
 # Load data
 '''
