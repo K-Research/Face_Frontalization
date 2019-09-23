@@ -8,29 +8,34 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from sklearn.model_selection import train_test_split
 import sys
 
 n_test_image = 2
-time = 2
+time = 6
 
 # Load data
+'''
 # X_train = np.load('‪D:/X.npy') # Side face
-X_train_path = 'D:/Bitcamp/Project/Frontalization/Numpy/X_10_per_person.npy'
+X_train_path = 'D:/Bitcamp/Project/Frontalization/Numpy/color_28_x.npy'
 X_train = np.load(X_train_path)
 # Y_train = np.load('‪D:/Y_train.npy') # Front face
-Y_train_path = 'D:/Bitcamp/Project/Frontalization/Numpy/Y_10_per_person.npy'
+Y_train_path = 'D:/Bitcamp/Project/Frontalization/Numpy/color_28_y.npy'
 Y_train = np.load(Y_train_path)
+'''
+
+X_train = np.load('D:/Bitcamp/BitProject/npy/x.npy')
+Y_train = np.load('D:/Bitcamp/BitProject/npy/y.npy')
 
 # print(X_train.shape) # (300, 28, 28, 1)
 # print(Y_train.shape) # (300, 28, 28, 1)
+
+# X_train, _, Y_train, _ = train_test_split(X_train, Y_train, train_size = 0.5, shuffle = True, random_state = 66)
 
 X_test = np.load('D:/Bitcamp/BitProject/npy/lsm_x.npy') # Side face
 # Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy') # Front face
 Y_test_path = '‪D:/Bitcamp/BitProject/npy/lsm_y.npy'
 Y_test = np.load(Y_test_path.split('\u202a')[1])
-
-Y_test= Y_test.reshape(1, Y_test.shape[0], Y_test.shape[1], Y_test.shape[2])
-
 
 X_test_list = [] #
 Y_test_list = [] #
@@ -67,6 +72,8 @@ def latent_dimension():
 optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 
 n_show_image = 1 # Number of images to show
+
+image_index = 0
 
 train_epochs = X_train.shape[0]
 test_epochs = X_test.shape[0]
@@ -111,18 +118,16 @@ class DCGAN():
     def build_generator(self):
         model = Sequential()
 
-        model.add(Conv2D(512, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
-        model.add(BatchNormalization(momentum = 0.5))
-        # model.add(Activation('relu'))
-        # model.add(UpSampling2D())
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.5))
+        model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
+        model.add(BatchNormalization(momentum = 0.8))
         # model.add(Activation('relu'))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(UpSampling2D())
         model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.5))
+        model.add(BatchNormalization(momentum = 0.8))
+        # model.add(Activation('relu'))
+        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
         # model.add(Activation('relu'))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
@@ -130,7 +135,6 @@ class DCGAN():
 
         # model.summary()
         
-        # side_face = Input(shape = (self.latent_dimension, ))
         side_face = Input(shape = (self.height, self.width, self.channels)) #
         image = model(side_face)
         
@@ -170,24 +174,29 @@ class DCGAN():
         y_train = Y_train / 127.5 - 1.
 
         # Adversarial ground truths
-        fake = np.zeros((X_train.shape[0], 1))
-        real = np.ones((X_train.shape[0], 1))
+        fake = np.zeros((batch_size, 1))
+        real = np.ones((batch_size, 1))
 
         print('Training')
 
         for i in range(epochs):
             # Select a random half of images
-            front_image = y_train
+            index = np.random.randint(0, train_epochs, batch_size)
+            front_image = y_train[index]
 
-            # Sample noise and generate a batch of new images
-            side_image = X_train #
+            # Generate a batch of new images
+            side_image = X_train[index]
             
             generated_image = self.generator.predict(side_image)
+
+            # self.discriminator.trainable = True
 
             # Train the discriminator (real classified as ones and generated as zeros)
             discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
             discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
             discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
+
+            # self.discriminator.trainable = False
 
             # Train the generator (wants discriminator to mistake images as real)
             generator_loss = self.combined.train_on_batch(side_image, real)
@@ -206,17 +215,18 @@ class DCGAN():
         y_test = Y_test / 127.5 - 1.
 
         # Adversarial ground truths
-        fake = np.zeros((X_test.shape[0], 1))
-        real = np.ones((X_test.shape[0], 1))
+        fake = np.zeros((batch_size, 1))
+        real = np.ones((batch_size, 1))
 
         print('Testing')
 
         for j in range(epochs):
             # Select a random half of images
-            front_image = y_test 
+            index = np.random.randint(0, train_epochs, batch_size)
+            front_image = y_test[index]
 
-            # Sample noise and generate a batch of new images
-            side_image = X_test 
+            # Generate a batch of new images
+            side_image = X_test[index]
 
             generated_image = self.generator.predict(side_image)
 
@@ -236,11 +246,12 @@ class DCGAN():
             if i % save_interval == 0:
                 save_path = 'D:/Generated Image/Testing' + str(time) + '/'
                 self.save_image(number = j, front_image = front_image, side_image = side_image, save_path = save_path)
-      
+
     def save_image(self, number, front_image, side_image, save_path):
+        global image_index
+
         # Rescale images 0 - 1
-        # generated_image = 0.5 * self.generator.predict(X_train[number]) + 0.5
-        generated_image = 0.5 * self.generator.predict(X_train) + 0.5 #
+        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
 
         plt.figure(figsize = (8, 2))
 
@@ -249,23 +260,32 @@ class DCGAN():
 
         # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
         for k in range(n_show_image):
-            generated_image_plot = plt.subplot(1, 3, k + 1 + (n_show_image * 2))
+            generated_image_plot = plt.subplot(1, 3, k + 1 + (2 * n_show_image))
             generated_image_plot.set_title('Generated image (front image)')
-            plt.imshow(generated_image[k,  :  , :  , 0], cmap = 'gray')
-
-            original_front_face_image_plot = plt.subplot(1, 3, k + 1 + n_show_image)
-            original_front_face_image_plot.set_title('Origninal side image')
 
             if channels == 1:
-                plt.imshow(front_image[k].reshape(height, width), cmap = 'gray')
+                plt.imshow(generated_image[image_index,  :  ,  :  , 0], cmap = 'gray')
+            
+            else:
+                plt.imshow(generated_image[image_index,  :  ,  :  ,  : ])
+
+            original_front_face_image_plot = plt.subplot(1, 3, k + 1 + n_show_image)
+            original_front_face_image_plot.set_title('Origninal front image')
+
+            if channels == 1:
+                plt.imshow(front_image[image_index].reshape(height, width), cmap = 'gray')
                 
             else:
-                plt.imshow(front_image[k], cmap = 'gray')
-                # plt.imshow(front_image[k].reshape(height, width, channels), cmap = 'gray')
+                plt.imshow(front_image[image_index], cmap = 'gray')
 
             original_side_face_image_plot = plt.subplot(1, 3, k + 1)
-            original_side_face_image_plot.set_title('Origninal front image')
-            plt.imshow(side_image[k].reshape(height, width), cmap = 'gray')
+            original_side_face_image_plot.set_title('Origninal side image')
+
+            if channels == 1:
+                plt.imshow(side_image[image_index].reshape(height, width), cmap = 'gray')
+                
+            else:
+                plt.imshow(side_image[image_index], cmap = 'gray')
 
             # Don't show axis of x and y
             generated_image_plot.axis('off')
@@ -287,4 +307,4 @@ class DCGAN():
 if __name__ == '__main__':
     dcgan = DCGAN()
     dcgan.train(epochs = train_epochs, batch_size = 28, save_interval = 1)
-    dcgan.test(epochs = test_epochs, batch_size = 28, save_interval = 1)
+    # dcgan.test(epochs = test_epochs, batch_size = 28, save_interval = 1)
