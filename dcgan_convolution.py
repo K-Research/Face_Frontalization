@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 import sys
 
 n_test_image = 2
@@ -49,6 +50,10 @@ Y_test = np.array(Y_test_list) #
 
 # print(X_test.shape) # (2, 28, 28, 1)
 # print(Y_test.shape) # (2, 28, 28, 1)
+
+# Shuffle
+X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
+X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
 # Prameters
 height = X_train.shape[1]
@@ -307,4 +312,4 @@ class DCGAN():
 if __name__ == '__main__':
     dcgan = DCGAN()
     dcgan.train(epochs = train_epochs, batch_size = 28, save_interval = 1)
-    # dcgan.test(epochs = test_epochs, batch_size = 28, save_interval = 1)
+    dcgan.test(epochs = test_epochs, batch_size = 28, save_interval = 1)
