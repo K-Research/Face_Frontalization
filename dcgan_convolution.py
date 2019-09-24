@@ -13,7 +13,7 @@ from sklearn.utils import shuffle
 import sys
 
 n_test_image = 2
-time = 7
+time = 8
 
 # Load data
 '''
@@ -60,19 +60,12 @@ height = X_train.shape[1]
 width = X_train.shape[2]
 channels = X_train.shape[3]
 
-def latent_dimension():
-    if height == width:
-        latent_dimension = height
-
-    else:
-        latent_dimension = int(math.sqrt(height * width))
-
-    return latent_dimension
+latent_dimension = width
 
 # print(height) # 28
 # print(width) # 28
 # print(channels) # 1
-# print(latent_dimension()) # 28
+# print(latent_dimension) # 28
 
 optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 
@@ -94,9 +87,11 @@ class DCGAN():
         self.width = width
         self.channels = channels
         # self.image_shape = (self.height, self.width, self.channels)
-        self.latent_dimension = latent_dimension()
+        self.latent_dimension = latent_dimension
 
         self.optimizer = optimizer
+
+        self.image_index = image_index
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -106,7 +101,8 @@ class DCGAN():
         self.generator = self.build_generator()
 
         # The generator takes noise as input and generates imgs
-        z = Input(shape = (self.height, self.width, self.channels, ))
+        # z = Input(shape = (self.latent_dimension, ))
+        z = Input(shape = (self.height, self.width, self.channels, )) #
         image = self.generator(z)
 
         # For the combined model we will only train the generator
@@ -123,23 +119,27 @@ class DCGAN():
     def build_generator(self):
         model = Sequential()
 
-        model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
-        model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation('relu'))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
+        # model.add(Reshape((7, 7, 128)))
+        # model.add(UpSampling2D())
+        model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels))) #
+        model.add(BatchNormalization(momentum = 0.8)) #
+        model.add(Activation('relu')) #
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))) #
         model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation('relu'))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        model.add(Activation('relu'))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation('relu'))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        model.add(Activation('relu'))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(Activation('tanh'))
 
         # model.summary()
         
+        # side_face = Input(shape = (self.latent_dimension, ))
         side_face = Input(shape = (self.height, self.width, self.channels)) #
         image = model(side_face)
         
@@ -152,7 +152,7 @@ class DCGAN():
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
         model.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(ZeroPadding2D(padding=((0, 1),(0, 1))))
+        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
@@ -177,6 +177,7 @@ class DCGAN():
     def train(self, epochs, batch_size, save_interval):
         # Rescale -1 to 1
         y_train = Y_train / 127.5 - 1.
+        # y_train = np.expand_dims(y_train, axis = 3)
 
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
@@ -218,6 +219,7 @@ class DCGAN():
     def test(self, epochs, batch_size, save_interval):
         # Rescale -1 to 1
         y_test = Y_test / 127.5 - 1.
+        # y_test = np.expand_dims(y_test, axis = 3)
 
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
@@ -227,7 +229,7 @@ class DCGAN():
 
         for j in range(epochs):
             # Select a random half of images
-            index = np.random.randint(0, train_epochs, batch_size)
+            index = np.random.randint(0, test_epochs, batch_size)
             front_image = y_test[index]
 
             # Generate a batch of new images
@@ -253,7 +255,7 @@ class DCGAN():
                 self.save_image(number = j, front_image = front_image, side_image = side_image, save_path = save_path)
 
     def save_image(self, number, front_image, side_image, save_path):
-        global image_index
+        # global image_index
 
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5

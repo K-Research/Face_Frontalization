@@ -8,21 +8,26 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle
 import sys
 
 n_test_image = 2
-time = 10
+time = 8
 
 # Load data
-X_train = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
+'''
+# X_train = np.load('‪D:/X.npy') # Side face
+X_train_path = 'D:/Bitcamp/Project/Frontalization/Numpy/color_28_x.npy'
+X_train = np.load(X_train_path)
+# Y_train = np.load('‪D:/Y_train.npy') # Front face
+Y_train_path = 'D:/Bitcamp/Project/Frontalization/Numpy/color_28_y.npy'
+Y_train = np.load(Y_train_path)
+'''
+
+X_train = np.load('D:/Bitcamp/BitProject/npy/x.npy')
+Y_train = np.load('D:/Bitcamp/BitProject/npy/y.npy')
 
 # print(X_train.shape) # (300, 28, 28, 1)
 # print(Y_train.shape) # (300, 28, 28, 1)
-
-# X_train, _, Y_train, _ = train_test_split(X_train, Y_train, train_size = 0.2, shuffle = True, random_state = 66)
 
 X_test = np.load('D:/Bitcamp/BitProject/npy/lsm_x.npy') # Side face
 # Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy') # Front face
@@ -41,10 +46,6 @@ Y_test = np.array(Y_test_list) #
 
 # print(X_test.shape) # (2, 28, 28, 1)
 # print(Y_test.shape) # (2, 28, 28, 1)
-
-# Shuffle
-X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
-X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
 # Prameters
 height = X_train.shape[1]
@@ -69,6 +70,9 @@ test_epochs = X_test.shape[0]
 train_save_interval = 1
 test_save_interval = 1
 
+X_train = X_train.reshape(train_epochs, height, width)
+X_test = X_test.reshape(test_epochs, height, width)
+
 def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
 
@@ -92,8 +96,8 @@ class DCGAN():
         self.generator = self.build_generator()
 
         # The generator takes noise as input and generates imgs
-        # z = Input(shape = (self.latent_dimension, ))
-        z = Input(shape = (self.height, self.width, self.channels, )) #
+        z = Input(shape = (self.latent_dimension, ))
+        # z = Input(shape = (self.height, self.width, self.channels, )) #
         image = self.generator(z)
 
         # For the combined model we will only train the generator
@@ -110,36 +114,26 @@ class DCGAN():
     def build_generator(self):
         model = Sequential()
 
-        # model.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
-        # model.add(Reshape((7, 7, 128)))
-        # model.add(UpSampling2D())
-        model.add(Conv2D(self.width, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels))) #
-        model.add(BatchNormalization(momentum = 0.8)) #
-        # model.add(Activation('relu'))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Flatten())
-        model.add(Dense(128 * 7 * 7 * 3))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Dense(128 * 7 * 7))
+        model.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
+        # model.add(Dense(128 * 7 * 7, input_dim = self.latent_dimension))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Reshape((7, 7, 128)))
         model.add(UpSampling2D())
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation('relu'))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        model.add(Activation('relu'))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(UpSampling2D())
         model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation('relu'))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        model.add(Activation('relu'))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(Activation('tanh'))
 
         # model.summary()
         
-        # side_face = Input(shape = (self.latent_dimension, ))
-        side_face = Input(shape = (self.height, self.width, self.channels)) #
+        side_face = Input(shape = (self.latent_dimension, ))
         image = model(side_face)
         
         return Model(side_face, image)
@@ -166,7 +160,7 @@ class DCGAN():
         model.add(Flatten())
         model.add(Dense(1, activation = 'sigmoid'))
 
-        # model.summary()
+        model.summary()
 
         image = Input(shape = (self.height, self.width, self.channels))
         validity = model(image)
@@ -186,21 +180,25 @@ class DCGAN():
         for i in range(epochs):
             # Select a random half of images
             index = np.random.randint(0, train_epochs, batch_size)
+            # front_image = y_train[index]
             front_image = y_train[index]
+            print(front_image.shape) # (28, 28, 28, 1)
 
             # Generate a batch of new images
-            side_image = X_train[index]
-            
+            side_image = X_train[i]
+
+            print(side_image.shape) # (28, 28)
+                        
             generated_image = self.generator.predict(side_image)
 
-            self.discriminator.trainable = True
+            # self.discriminator.trainable = True
 
             # Train the discriminator (real classified as ones and generated as zeros)
             discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
             discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
             discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
 
-            self.discriminator.trainable = False
+            # self.discriminator.trainable = False
 
             # Train the generator (wants discriminator to mistake images as real)
             generator_loss = self.combined.train_on_batch(side_image, real)
@@ -217,7 +215,6 @@ class DCGAN():
     def test(self, epochs, batch_size, save_interval):
         # Rescale -1 to 1
         y_test = Y_test / 127.5 - 1.
-        # y_test = np.expand_dims(y_test, axis = 3)
 
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
@@ -231,7 +228,7 @@ class DCGAN():
             front_image = y_test[index]
 
             # Generate a batch of new images
-            side_image = X_test[index]
+            side_image = X_train[i] 
 
             generated_image = self.generator.predict(side_image)
 
@@ -287,7 +284,8 @@ class DCGAN():
             original_side_face_image_plot.set_title('Origninal side image')
 
             if channels == 1:
-                plt.imshow(side_image[image_index].reshape(height, width), cmap = 'gray')
+                # plt.imshow(side_image[image_index].reshape(height, width), cmap = 'gray')
+                plt.imshow(side_image, cmap = 'gray')
                 
             else:
                 plt.imshow(side_image[image_index], cmap = 'gray')

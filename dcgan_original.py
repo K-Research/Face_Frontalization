@@ -128,6 +128,8 @@ class DCGAN():
 
             # Sample noise and generate a batch of new images
             noise = np.random.normal(0, 1, (batch_size, self.latent_dim))
+            print(imgs.shape)
+            print(noise.shape)
             gen_imgs = self.generator.predict(noise)
 
             # Train the discriminator (real classified as ones and generated as zeros)

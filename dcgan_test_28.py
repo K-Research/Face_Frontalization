@@ -108,7 +108,7 @@ class DCGAN():
 
         # Load the dataset
         # (X_train, _), (_, _) = mnist.load_data()
-        X_train = np.load('./npy/y.npy')
+        X_train = np.load('D:/Bitcamp/BitProject/npy/y.npy')
 
         # Rescale -1 to 1
         X_train = X_train / 127.5 - 1.
@@ -117,7 +117,7 @@ class DCGAN():
         # Adversarial ground truths
         valid = np.ones((batch_size, 1))
         fake = np.zeros((batch_size, 1))
-        noises = np.load('./npy/x.npy')
+        noises = np.load('D:/Bitcamp/BitProject/npy/x.npy')
         noises = noises.reshape(noises.shape[0], 28, 28)
 
 
@@ -134,8 +134,8 @@ class DCGAN():
             # Sample noise and generate a batch of new images
             # noise = np.random.normal(0, 1, (batch_size, self.latent_dim))
             noise = noises[epoch]
-            # print(noise)
-            # print(noise.shape)
+            print(noises.shape)
+            print(noise.shape)
             gen_imgs = self.generator.predict(noise)
 
             # Train the discriminator (real classified as ones and generated as zeros)
@@ -160,7 +160,7 @@ class DCGAN():
     def save_imgs(self, epoch):
         r, c = 5, 5
         # noise = np.random.normal(0, 1, (r * c, self.latent_dim))
-        noises = np.load('./npy/x.npy')
+        noises = np.load('D:/Bitcamp/BitProject/npy/x.npy')
         noises = noises.reshape(noises.shape[0], 28, 28)
         gen_imgs = self.generator.predict(noises[epoch])
 
