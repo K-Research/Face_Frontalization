@@ -1,6 +1,7 @@
+#%%
 from __future__ import print_function, division
 
-from keras.layers import Activation, BatchNormalization,Conv2D, Dense, Dropout, Flatten, Input, Reshape, UpSampling2D, ZeroPadding2D
+from keras.layers import Activation, BatchNormalization,Conv2D, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam, Nadam
@@ -12,22 +13,22 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 import sys
 
-n_test_image = 2
-time = 10
+n_test_image = 28
+time = 11
 
 # Load data
-X_train = np.load('D:/Bitcamp/BitProject/npy/x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/BitProject/npy/y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/y.npy') # Front face
 
 # print(X_train.shape) # (300, 28, 28, 1)
 # print(Y_train.shape) # (300, 28, 28, 1)
 
 # X_train, _, Y_train, _ = train_test_split(X_train, Y_train, train_size = 0.2, shuffle = True, random_state = 66)
 
-X_test = np.load('D:/Bitcamp/BitProject/npy/lsm_x.npy') # Side face
-# Y_test = np.load('‪D:/Bitcamp/BitProject/npy/lsm_y.npy') # Front face
-Y_test_path = '‪D:/Bitcamp/BitProject/npy/lsm_y.npy'
-Y_test = np.load(Y_test_path.split('\u202a')[1])
+X_test = np.load('D:/Bitcamp/Project/Frontalization/Numpy/lsm_x.npy') # Side face
+# Y_test = np.load('‪D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy') # Front face
+Y_test_path = 'D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy'
+Y_test = np.load(Y_test_path.split('\u202a')[0])
 
 X_test_list = [] #
 Y_test_list = [] #
@@ -43,8 +44,8 @@ Y_test = np.array(Y_test_list) #
 # print(Y_test.shape) # (2, 28, 28, 1)
 
 # Shuffle
-X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
-X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
+# X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
+# X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
 # Prameters
 height = X_train.shape[1]
@@ -77,7 +78,6 @@ class DCGAN():
         self.height = height
         self.width = width
         self.channels = channels
-        # self.image_shape = (self.height, self.width, self.channels)
         self.latent_dimension = latent_dimension
 
         self.optimizer = optimizer
@@ -110,15 +110,15 @@ class DCGAN():
     def build_generator(self):
         model = Sequential()
 
-        # model.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
-        # model.add(Reshape((7, 7, 128)))
-        # model.add(UpSampling2D())
-        model.add(Conv2D(self.width, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels))) #
-        model.add(BatchNormalization(momentum = 0.8)) #
-        # model.add(Activation('relu'))
+        model.add(Conv2D(256, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
+        model.add(BatchNormalization(momentum = 0.8))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        model.add(MaxPooling2D(pool_size = (2, 2), padding = 'same'))
+        model.add(Conv2D(128, kernel_size = (3, 3), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        model.add(MaxPooling2D(pool_size = (2, 2), padding = 'same'))
         model.add(Flatten())
-        model.add(Dense(128 * 7 * 7 * 3))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Dense(128 * 7 * 7))
         model.add(Reshape((7, 7, 128)))
@@ -126,20 +126,17 @@ class DCGAN():
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation('relu'))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(UpSampling2D())
         model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation('relu'))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(Activation('tanh'))
 
         # model.summary()
         
-        # side_face = Input(shape = (self.latent_dimension, ))
-        side_face = Input(shape = (self.height, self.width, self.channels)) #
+        side_face = Input(shape = (self.height, self.width, self.channels))
         image = model(side_face)
         
         return Model(side_face, image)
@@ -185,7 +182,7 @@ class DCGAN():
 
         for i in range(epochs):
             # Select a random half of images
-            index = np.random.randint(0, train_epochs, batch_size)
+            index = np.random.randint(0, X_train.shape[0], batch_size)
             front_image = y_train[index]
 
             # Generate a batch of new images
@@ -227,7 +224,7 @@ class DCGAN():
 
         for j in range(epochs):
             # Select a random half of images
-            index = np.random.randint(0, test_epochs, batch_size)
+            index = np.random.randint(0, X_test.shape[0], batch_size)
             front_image = y_test[index]
 
             # Generate a batch of new images
@@ -312,4 +309,6 @@ class DCGAN():
 if __name__ == '__main__':
     dcgan = DCGAN()
     dcgan.train(epochs = train_epochs, batch_size = 28, save_interval = 1)
-    dcgan.test(epochs = test_epochs, batch_size = 28, save_interval = 1)
+    # dcgan.test(epochs = test_epochs, batch_size = 28, save_interval = 1)
+
+#%%
