@@ -8,28 +8,31 @@ num = 14
 images = glob.glob('D:/Bitcamp/Project/Frontalization/Data/origin_image_sample/*.jpg')
 x = []
 y = []
-
+n = 0
 for fname in images:
     im = pilimg.open(fname)
     # print(fname)
     im = im.resize((size,size))
     # im.show()
     # print(im.size)
-    if (fname % num == 10)|(fname % num == 11)|(fname % num == 12)|(fname % num == 13):
+    if (n % num == 10) or (n % num == 11) or (n % num == 12) or (n % num == 13):
+        n += 1
         continue
     else :
         img = np.array(im)
-        lable = np.array(images[(fname // num) + 1] * 10)
+        img_y =  pilimg.open(images[((n // num) + 1 )* 10])
+        img_y = img_y.resize((size,size))
+        lable = np.array(img_y)
     # print(img.shape)
     # img = img.reshape(img.shape[0], img.shape[1], 1)
     # print(img.shape)
-    x.append(img)
-    y.append(lable)
+        x.append(img)
+        y.append(lable)
+    n += 1
 
 x = np.array(x)
 print(x.shape)
-np.save("D:/{}_{}.npy".format(size, num), x)
+np.save("D:/X_{}_{}.npy".format(size, num), x)
 y = np.array(y)
 print(y.shape)
-print(y)
-np.save("D:/{}_{}.npy".format(size, num), y)
+np.save("D:/Y_{}_{}.npy".format(size, num), y)
