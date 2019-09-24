@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 import sys
 
-n_test_image = 2
+n_test_image = 28
 time = 10
 
 # Load data
@@ -77,7 +77,6 @@ class DCGAN():
         self.height = height
         self.width = width
         self.channels = channels
-        # self.image_shape = (self.height, self.width, self.channels)
         self.latent_dimension = latent_dimension
 
         self.optimizer = optimizer
@@ -110,12 +109,8 @@ class DCGAN():
     def build_generator(self):
         model = Sequential()
 
-        # model.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
-        # model.add(Reshape((7, 7, 128)))
-        # model.add(UpSampling2D())
         model.add(Conv2D(self.width, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels))) #
         model.add(BatchNormalization(momentum = 0.8)) #
-        # model.add(Activation('relu'))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Flatten())
         model.add(Dense(128 * 7 * 7 * 3))
@@ -126,20 +121,17 @@ class DCGAN():
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation('relu'))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(UpSampling2D())
         model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation('relu'))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(Activation('tanh'))
 
         # model.summary()
         
-        # side_face = Input(shape = (self.latent_dimension, ))
-        side_face = Input(shape = (self.height, self.width, self.channels)) #
+        side_face = Input(shape = (self.height, self.width, self.channels))
         image = model(side_face)
         
         return Model(side_face, image)
