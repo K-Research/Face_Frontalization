@@ -14,7 +14,7 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 18
+time = 19
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
@@ -282,7 +282,8 @@ class DCGAN():
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
 
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+        # generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+        generated_image = (127.5 * (self.generator.predict(side_image) + 1)).astype(np.uint8)
 
         plt.figure(figsize = (8, 2))
 
