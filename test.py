@@ -239,7 +239,7 @@ class DCGAN():
                 if j % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(image_index = j, front_image = front_image, side_image = side_image, save_path = save_path)
-           
+
     def test(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
@@ -340,4 +340,5 @@ class DCGAN():
 if __name__ == '__main__':
     dcgan = DCGAN()
     dcgan.train(epochs = train_epochs, batch_size = train_batch_size, save_interval = train_save_interval)
+    
     # dcgan.test(epochs = test_epochs, batch_size = test_batch_size, save_interval = test_save_interval)
