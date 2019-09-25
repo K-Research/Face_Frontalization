@@ -14,7 +14,7 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 18
+time = 17
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
@@ -23,7 +23,7 @@ Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # F
 # print(X_train.shape)
 # print(Y_train.shape)
 
-# X_train, _, Y_train, _ = train_test_split(X_train, Y_train, train_size = 0.064, shuffle = True, random_state = 66)
+X_train, _, Y_train, _ = train_test_split(X_train, Y_train, train_size = 0.064, shuffle = True, random_state = 66)
 
 X_test = np.load('D:/Bitcamp/Project/Frontalization/Numpy/lsm_x.npy') # Side face
 # Y_test = np.load('‪D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy') # Front face
@@ -125,19 +125,19 @@ class DCGAN():
         model.add(Conv2D(filters = 32, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Flatten())
-        model.add(Dense(units = latent_dimension))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))      
+        model.add(Dense(units = 4 * quarter_height))
+        model.add(Activation(LeakyReLU(alpha = 0.3)))   
         model.add(Dense(units = 128 * quarter_height * quarter_width))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        model.add(Activation(LeakyReLU(alpha = 0.3)))        
         model.add(Reshape((quarter_height, quarter_width, 128)))
         model.add(UpSampling2D(size = (2, 2)))
         model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.5))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))      
+        model.add(Activation(LeakyReLU(alpha = 0.3)))
         model.add(UpSampling2D(size = (2, 2)))
         model.add(Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.5))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))      
+        model.add(Activation(LeakyReLU(alpha = 0.3)))
         model.add(Conv2D(filters = self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(Activation('tanh'))
 

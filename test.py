@@ -14,16 +14,16 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 14
+time = 18
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
 
-# X_train, _, Y_train, _ = train_test_split(X_train, Y_train, train_size = 0.33, shuffle = True, random_state = 66)
+# X_train, _, Y_train, _ = train_test_split(X_train, Y_train, train_size = 0.064, shuffle = True, random_state = 66)
 
 X_test = np.load('D:/Bitcamp/Project/Frontalization/Numpy/lsm_x.npy') # Side face
 # Y_test = np.load('‪D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy') # Front face
@@ -75,9 +75,9 @@ n_show_image = 1 # Number of images to show
 
 number = 0
 
-train_epochs = 100
+train_epochs = 10000
 test_epochs = 1
-train_batch_size = latent_dimension
+train_batch_size = 64
 test_batch_size = latent_dimension
 train_save_interval = 1
 test_save_interval = 1
@@ -122,25 +122,23 @@ class DCGAN():
     def build_generator(self):
         model = Sequential()
 
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
-        model.add(BatchNormalization(momentum = 0.5))
+        model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(MaxPooling2D(pool_size = (2, 2), padding = 'same'))
-        model.add(Conv2D(128, kernel_size = (3, 3), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.5))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(MaxPooling2D(pool_size = (2, 2), padding = 'same'))
         model.add(Flatten())
+        model.add(Dense(units = latent_dimension))
+        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))      
+        model.add(Dense(units = 128 * quarter_height * quarter_width))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Dense(128 * quarter_height * quarter_width))
         model.add(Reshape((quarter_height, quarter_width, 128)))
-        model.add(UpSampling2D())
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(UpSampling2D(size = (2, 2)))
+        model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.5))
-        model.add(UpSampling2D())
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))      
+        model.add(UpSampling2D(size = (2, 2)))
+        model.add(Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.5))
+        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))      
+        model.add(Conv2D(filters = self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(Activation('tanh'))
 
         # model.summary()
@@ -255,6 +253,9 @@ class DCGAN():
 
     def save_image(self, image_index, front_image, side_image, save_path):
         global number
+
+        front_image = (127.5 * (front_image + 1)).astype(np.uint8)
+        side_image = (127.5 * (side_image + 1)).astype(np.uint8)
 
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
