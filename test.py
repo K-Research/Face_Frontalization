@@ -23,8 +23,6 @@ Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # F
 # print(X_train.shape)
 # print(Y_train.shape)
 
-# X_train, _, Y_train, _ = train_test_split(X_train, Y_train, train_size = 0.064, shuffle = True, random_state = 66)
-
 X_test = np.load('D:/Bitcamp/Project/Frontalization/Numpy/lsm_x.npy') # Side face
 # Y_test = np.load('‪D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy') # Front face
 Y_test_path = 'D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy'
@@ -49,17 +47,18 @@ Y_train = Y_train / 127.5 - 1.
 X_test = X_test / 127.5 - 1.
 Y_test = Y_test / 127.5 - 1.
 
+# Shuffle
+X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
+X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
+
 # Prameters
 height = X_train.shape[1]
 width = X_train.shape[2]
+channels = X_train.shape[3]
+latent_dimension = width
 
 quarter_height = int(np.round(np.round(height / 2) / 2))
 quarter_width = int(np.round(np.round(width / 2) / 2))
-
-channels = X_train.shape[3]
-
-latent_dimension = width
-
 half_latent_dimension = int(round(latent_dimension / 2))
 
 # print(height)
@@ -75,12 +74,35 @@ n_show_image = 1 # Number of images to show
 
 number = 0
 
+def batch_size():
+    if latent_dimension > 32:
+        batch_size = 32
+
+        return batch_size
+
+    else:
+        batch_size = latent_dimension
+
+        return batch_size
+        
+
 train_epochs = 10000
 test_epochs = 1
-train_batch_size = 64
-test_batch_size = latent_dimension
+train_batch_size = batch_size()
+test_batch_size = batch_size()
 train_save_interval = 1
 test_save_interval = 1
+
+def generator_first_filter():
+    if latent_dimension > 64:
+        generator_first_filter = 64
+
+        return generator_first_filter
+
+    else:
+        generator_first_filter = latent_dimension
+
+        return generator_first_filter
 
 def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
@@ -119,10 +141,12 @@ class DCGAN():
         self.combined = Model(z, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
 
+        self.generator_first_filter = generator_first_filter()
+
     def build_generator(self):
         model = Sequential()
 
-        model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
+        model.add(Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Flatten())
         model.add(Dense(units = latent_dimension))
