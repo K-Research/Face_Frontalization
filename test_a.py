@@ -14,16 +14,16 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 30
+time = 21
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
 Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
 
+X_train = X_train.reshape(X_train.shape[0], X_train.shape[1] * X_train.shape[2] * X_train.shape[3])
+
 # print(X_train.shape)
 # print(Y_train.shape)
-
-# X_train, _, Y_train, _ = train_test_split(X_train, Y_train, train_size = 0.064, shuffle = True, random_state = 66)
 
 X_test = np.load('D:/Bitcamp/Project/Frontalization/Numpy/lsm_x.npy') # Side face
 # Y_test = np.load('‪D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy') # Front face
@@ -44,22 +44,27 @@ Y_test = np.array(Y_test_list) #
 # print(Y_test.shape)
 
 # Rescale -1 to 1
-X_train = X_train / 127.5 - 1.
-Y_train = Y_train / 127.5 - 1.
-X_test = X_test / 127.5 - 1.
-Y_test = Y_test / 127.5 - 1.
+# X_train = X_train / 127.5 - 1.
+# Y_train = Y_train / 127.5 - 1.
+# X_test = X_test / 127.5 - 1.
+# Y_test = Y_test / 127.5 - 1.
+
+# Shuffle
+X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
+X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
 # Prameters
-height = X_train.shape[1]
-width = X_train.shape[2]
+# height = X_train.shape[1]
+height = 128
+# width = X_train.shape[2]
+width = 128
+# channels = X_train.shape[3]
+channels = 3
+# latent_dimension = width
+latent_dimension = X_train.shape[1]
 
 quarter_height = int(np.round(np.round(height / 2) / 2))
 quarter_width = int(np.round(np.round(width / 2) / 2))
-
-channels = X_train.shape[3]
-
-latent_dimension = width
-
 half_latent_dimension = int(round(latent_dimension / 2))
 
 # print(height)
@@ -75,12 +80,36 @@ n_show_image = 1 # Number of images to show
 
 number = 0
 
+def batch_size():
+    if latent_dimension > 32:
+        batch_size = 32
+
+        return batch_size
+
+    else:
+        batch_size = latent_dimension
+
+        return batch_size
+        
+
 train_epochs = 10000
 test_epochs = 1
-train_batch_size = 64
-test_batch_size = latent_dimension
+# train_batch_size = batch_size()
+train_batch_size = 1
+test_batch_size = batch_size()
 train_save_interval = 1
 test_save_interval = 1
+
+def generator_first_filter():
+    if latent_dimension > 64:
+        generator_first_filter = 64
+
+        return generator_first_filter
+
+    else:
+        generator_first_filter = latent_dimension
+
+        return generator_first_filter
 
 def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
@@ -104,8 +133,8 @@ class DCGAN():
         self.generator = self.build_generator()
 
         # The generator takes noise as input and generates imgs
-        # z = Input(shape = (self.latent_dimension, ))
-        z = Input(shape = (self.height, self.width, self.channels, )) #
+        z = Input(shape = (self.latent_dimension, ))
+        # z = Input(shape = (self.height, self.width, self.channels, )) #
         image = self.generator(z)
 
         # For the combined model we will only train the generator
@@ -119,31 +148,35 @@ class DCGAN():
         self.combined = Model(z, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
 
+        self.generator_first_filter = generator_first_filter()
+
     def build_generator(self):
         model = Sequential()
 
-        model.add(Conv2D(filters = 32, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
+        # model.add(Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
+        # model.add(MaxPooling2D(pool_size = 2, padding = 'same'))
+        # model.add(Flatten())
+        # model.add(Dense(units = 128))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(Dense(units = 128 * quarter_height * quarter_width))
+        model.add(Dense(units = 32 * quarter_height * quarter_width, input_dim = latent_dimension))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Flatten())
-        model.add(Dense(units = latent_dimension))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))      
-        model.add(Dense(units = 128 * quarter_height * quarter_width))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Reshape((quarter_height, quarter_width, 128)))
+        model.add(Reshape((quarter_height, quarter_width, 32)))
         model.add(UpSampling2D(size = (2, 2)))
-        model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(Conv2D(filters = 16, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.5))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))      
         model.add(UpSampling2D(size = (2, 2)))
-        model.add(Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(Conv2D(filters = 8, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.5))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))      
         model.add(Conv2D(filters = self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(Activation('tanh'))
 
-        # model.summary()
+        model.summary()
         
-        side_face = Input(shape = (self.height, self.width, self.channels))
+        side_face = Input(shape = (self.latent_dimension, ))
+        # side_face = Input(shape = (self.height, self.width, self.channels)) #
         image = model(side_face)
         
         return Model(side_face, image)
@@ -208,14 +241,14 @@ class DCGAN():
                 generator_loss = self.combined.train_on_batch(side_image, real)
                 
                 # Plot the progress
-                print ('Training epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                        % (i, j, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+                print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
+                        % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
                 
                 # If at save interval -> save generated image samples
                 if j % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(image_index = j, front_image = front_image, side_image = side_image, save_path = save_path)
-           
+
     def test(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
@@ -254,11 +287,13 @@ class DCGAN():
     def save_image(self, image_index, front_image, side_image, save_path):
         global number
 
-        front_image = (127.5 * (front_image + 1)).astype(np.uint8)
-        side_image = (127.5 * (side_image + 1)).astype(np.uint8)
-
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+        # front_image = (127.5 * (front_image + 1)).astype(np.uint8)
+        # side_image = (127.5 * (side_image + 1)).astype(np.uint8)
+
+        # generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+        # generated_image = (127.5 * (self.generator.predict(side_image) + 1)).astype(np.uint8)
+        generated_image = self.generator.predict(side_image)
 
         plt.figure(figsize = (8, 2))
 
@@ -316,4 +351,5 @@ class DCGAN():
 if __name__ == '__main__':
     dcgan = DCGAN()
     dcgan.train(epochs = train_epochs, batch_size = train_batch_size, save_interval = train_save_interval)
+    
     # dcgan.test(epochs = test_epochs, batch_size = test_batch_size, save_interval = test_save_interval)
