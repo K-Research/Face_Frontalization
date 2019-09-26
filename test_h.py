@@ -13,8 +13,8 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
-n_test_image = 28
-time = 18
+n_test_image = 2
+time = 11
 
 # Load data
 X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
@@ -208,8 +208,8 @@ class DCGAN():
                 generator_loss = self.combined.train_on_batch(side_image, real)
                 
                 # Plot the progress
-                print ('Training epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                        % (i, j, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+                print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
+                        % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
                 
                 # If at save interval -> save generated image samples
                 if j % save_interval == 0:
