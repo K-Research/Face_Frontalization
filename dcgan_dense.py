@@ -11,7 +11,7 @@ import os
 import sys
 
 n_test_image = 2
-time = 8
+time = 24
 
 # Load data
 '''
