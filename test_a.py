@@ -13,8 +13,8 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
-n_test_image = 28
-time = 25
+n_test_image = 2
+time = 27
 
 # Load data
 # X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
@@ -86,7 +86,6 @@ def batch_size():
         batch_size = latent_dimension
 
         return batch_size
-        
 
 train_epochs = 10000
 test_epochs = 1

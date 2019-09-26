@@ -338,5 +338,4 @@ class DCGAN():
 if __name__ == '__main__':
     dcgan = DCGAN()
     dcgan.train(epochs = train_epochs, batch_size = train_batch_size, save_interval = train_save_interval)
-    
     # dcgan.test(epochs = test_epochs, batch_size = test_batch_size, save_interval = test_save_interval)
