@@ -14,13 +14,13 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 2
-time = 51
+time = 27
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
-# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
-# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/y.npy') # Front face
+# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/x.npy') # Side face
+# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -43,14 +43,11 @@ Y_test = np.array(Y_test_list) #
 # print(X_test.shape)
 # print(Y_test.shape)
 
-X_train = X_train.astype(float)
-Y_train = Y_train.astype(float)
-
 # Rescale -1 to 1
-# X_train = X_train / 127.5 - 1.
-# Y_train = Y_train / 127.5 - 1.
-# X_test = X_test / 127.5 - 1.
-# Y_test = Y_test / 127.5 - 1.
+X_train = X_train / 127.5 - 1.
+Y_train = Y_train / 127.5 - 1.
+X_test = X_test / 127.5 - 1.
+Y_test = Y_test / 127.5 - 1.
 
 # Shuffle
 X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
@@ -65,9 +62,6 @@ latent_dimension = width
 quarter_height = int(np.round(np.round(height / 2) / 2))
 quarter_width = int(np.round(np.round(width / 2) / 2))
 half_latent_dimension = int(np.round(latent_dimension / 2))
-quarter_dimension = int(np.round(np.round(latent_dimension / 2) / 2))
-
-reshape_depth = 16
 
 # print(height)
 # print(width)
@@ -75,10 +69,6 @@ reshape_depth = 16
 # print(quarter_width)
 # print(channels)
 # print(latent_dimension)
-# print(quarter_height)
-# print(quarter_width)
-# print(half_latent_dimension)
-# print(quarter_dimension)
 
 optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 
@@ -154,20 +144,41 @@ class DCGAN():
         self.generator_first_filter = generator_first_filter()
 
     def build_generator(self):
-        side_face = Input(shape = (self.height, self.width, self.channels))
+        # model = Sequential()
 
-        conv2d_layer = Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same')(side_face)
-        activation_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(conv2d_layer)
+        # model.add(Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
+        # model.add(Flatten())
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(Dense(64 * 7 * 7))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(Reshape((7, 7, 64)))
+        # model.add(UpSampling2D())
+        # model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(BatchNormalization(momentum = 0.8))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(UpSampling2D())
+        # model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(BatchNormalization(momentum = 0.8))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(Activation('tanh'))
 
-        blue_split = Lambda(lambda X_train : conv2d_layer[  :  ,  :  ,  :  ,  0])(activation_layer)
-        green_split = Lambda(lambda X_train : conv2d_layer[  :  ,  :  ,  :  ,  1])(activation_layer)
-        red_split = Lambda(lambda X_train : conv2d_layer[  :  ,  :  ,  :  ,  2])(activation_layer)
+        # side_face = Input(shape = (self.height, self.width, self.channels))
+        # image = model(side_face)
+
+        input = Input(shape = (self.height, self.width, self.channels))
+
+        conv2d_layer = Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same')(input)
+
+        blue_split = Lambda(lambda X_train : conv2d_layer[  :  ,  :  ,  :  ,  0])(conv2d_layer)
+        green_split = Lambda(lambda X_train : conv2d_layer[  :  ,  :  ,  :  ,  1])(conv2d_layer)
+        red_split = Lambda(lambda X_train : conv2d_layer[  :  ,  :  ,  :  ,  2])(conv2d_layer)
 
         blue_layer = (Flatten())(blue_split)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
-        blue_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(blue_layer)
+        blue_layer = Dense(128 * 32 * 32)(blue_layer)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
-        blue_layer = Reshape((quarter_dimension, quarter_dimension, reshape_depth))(blue_layer)
+        blue_layer = Reshape((32, 32, 128))(blue_layer)
         blue_layer = UpSampling2D()(blue_layer)
         blue_layer = Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
         blue_layer = BatchNormalization(momentum = 0.8)(blue_layer)
@@ -181,9 +192,9 @@ class DCGAN():
 
         green_layer = (Flatten())(green_split)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
-        green_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(green_layer)
+        green_layer = Dense(128 * 32 * 32)(green_layer)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
-        green_layer = Reshape((quarter_dimension, quarter_dimension, reshape_depth))(green_layer)
+        green_layer = Reshape((32, 32, 128))(green_layer)
         green_layer = UpSampling2D()(green_layer)
         green_layer = Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
         green_layer = BatchNormalization(momentum = 0.8)(green_layer)
@@ -197,9 +208,9 @@ class DCGAN():
 
         red_layer = (Flatten())(red_split)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
-        red_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(red_layer)
+        red_layer = Dense(128 * 32 * 32)(red_layer)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
-        red_layer = Reshape((quarter_dimension, quarter_dimension, reshape_depth))(red_layer)
+        red_layer = Reshape((32, 32, 128))(red_layer)
         red_layer = UpSampling2D()(red_layer)
         red_layer = Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
         red_layer = BatchNormalization(momentum = 0.8)(red_layer)
@@ -213,11 +224,16 @@ class DCGAN():
 
         concatenate_layer = concatenate([blue_output, green_output, red_output], axis = -1)
 
-        model = Model(side_face, concatenate_layer)
-
-        model.summary()
+        # model.summary()
         
-        return model
+        side_face = Input(shape = (self.height, self.width, self.channels))
+        model = Model(input, concatenate_layer) #
+        image = model(side_face)
+        
+        return Model(side_face, image)
+        # model = Model(input, concatenate_layer)
+        # model.summary()
+        # return Model(side_face, model)
 
     def build_discriminator(self):
         model = Sequential()
@@ -241,7 +257,7 @@ class DCGAN():
         model.add(Flatten())
         model.add(Dense(1, activation = 'sigmoid'))
 
-        model.summary()
+        # model.summary()
 
         image = Input(shape = (self.height, self.width, self.channels))
         validity = model(image)
@@ -276,8 +292,6 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                print('side_image.shape : ', side_image.shape) # (32, 128, 128, 3)
-                print('real.shape : ', real.shape) # (32, 1)
                 generator_loss = self.combined.train_on_batch(side_image, real)
                 
                 # Plot the progress
