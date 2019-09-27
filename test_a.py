@@ -43,14 +43,12 @@ Y_test = np.array(Y_test_list) #
 # print(X_test.shape)
 # print(Y_test.shape)
 
-X_train = X_train.astype(float)
-Y_train = Y_train.astype(float)
-
 # Rescale -1 to 1
-# X_train = X_train / 127.5 - 1.
-# Y_train = Y_train / 127.5 - 1.
-# X_test = X_test / 127.5 - 1.
-# Y_test = Y_test / 127.5 - 1.
+X_train = X_train / 127.5 - 1.
+Y_train = Y_train / 127.5 - 1.
+X_test = X_test / 127.5 - 1.
+Y_test = Y_test / 127.5 - 1.
+
 
 # Shuffle
 X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
@@ -159,9 +157,9 @@ class DCGAN():
         conv2d_layer = Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same')(side_face)
         activation_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(conv2d_layer)
 
-        blue_split = Lambda(lambda X_train : conv2d_layer[  :  ,  :  ,  :  ,  0])(activation_layer)
-        green_split = Lambda(lambda X_train : conv2d_layer[  :  ,  :  ,  :  ,  1])(activation_layer)
-        red_split = Lambda(lambda X_train : conv2d_layer[  :  ,  :  ,  :  ,  2])(activation_layer)
+        blue_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  0])(activation_layer)
+        green_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  1])(activation_layer)
+        red_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  2])(activation_layer)
 
         blue_layer = (Flatten())(blue_split)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
@@ -169,14 +167,14 @@ class DCGAN():
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
         blue_layer = Reshape((quarter_dimension, quarter_dimension, reshape_depth))(blue_layer)
         blue_layer = UpSampling2D()(blue_layer)
-        blue_layer = Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
+        blue_layer = Conv2D(filters = 32, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
         blue_layer = BatchNormalization(momentum = 0.8)(blue_layer)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
         blue_layer = UpSampling2D()(blue_layer)
-        blue_layer = Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
+        blue_layer = Conv2D(filters = 16, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
         blue_layer = BatchNormalization(momentum = 0.8)(blue_layer)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
-        blue_layer = Conv2D(1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
+        blue_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
         blue_output= Activation('tanh')(blue_layer)
 
         green_layer = (Flatten())(green_split)
@@ -185,14 +183,14 @@ class DCGAN():
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
         green_layer = Reshape((quarter_dimension, quarter_dimension, reshape_depth))(green_layer)
         green_layer = UpSampling2D()(green_layer)
-        green_layer = Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
+        green_layer = Conv2D(filters = 32, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
         green_layer = BatchNormalization(momentum = 0.8)(green_layer)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
         green_layer = UpSampling2D()(green_layer)
-        green_layer = Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
+        green_layer = Conv2D(filters = 16, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
         green_layer = BatchNormalization(momentum = 0.8)(green_layer)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
-        green_layer = Conv2D(1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
+        green_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
         green_output = Activation('tanh')(green_layer)
 
         red_layer = (Flatten())(red_split)
@@ -201,21 +199,21 @@ class DCGAN():
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
         red_layer = Reshape((quarter_dimension, quarter_dimension, reshape_depth))(red_layer)
         red_layer = UpSampling2D()(red_layer)
-        red_layer = Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
+        red_layer = Conv2D(filters = 32, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
         red_layer = BatchNormalization(momentum = 0.8)(red_layer)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
         red_layer = UpSampling2D()(red_layer)
-        red_layer = Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
+        red_layer = Conv2D(filters = 16, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
         red_layer = BatchNormalization(momentum = 0.8)(red_layer)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
-        red_layer = Conv2D(1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
+        red_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
         red_output = Activation('tanh')(red_layer)
 
         concatenate_layer = concatenate([blue_output, green_output, red_output], axis = -1)
 
         model = Model(side_face, concatenate_layer)
 
-        model.summary()
+        # model.summary()
         
         return model
 
@@ -241,7 +239,7 @@ class DCGAN():
         model.add(Flatten())
         model.add(Dense(1, activation = 'sigmoid'))
 
-        model.summary()
+        # model.summary()
 
         image = Input(shape = (self.height, self.width, self.channels))
         validity = model(image)
@@ -252,6 +250,7 @@ class DCGAN():
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
         real = np.ones((batch_size, 1))
+        # print('real.dtype : float64', real.dtype) # float64
 
         print('Training')
 
@@ -263,7 +262,6 @@ class DCGAN():
 
                 # Generate a batch of new images
                 side_image = X_train[index]
-                
                 generated_image = self.generator.predict(side_image)
 
                 self.discriminator.trainable = True
@@ -276,9 +274,10 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                print('side_image.shape : ', side_image.shape) # (32, 128, 128, 3)
-                print('real.shape : ', real.shape) # (32, 1)
+                # print('side_image.shape : ', side_image.shape) # (32, 128, 128, 3)
+                # print('real.shape : ', real.shape) # (32, 1)
                 generator_loss = self.combined.train_on_batch(side_image, real)
+                # generator_loss = self.combined.train_on_batch(side_image, np.ones((batch_size, height, width, channels)))
                 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
@@ -328,11 +327,11 @@ class DCGAN():
         global number
 
         # front_image = (127.5 * (front_image + 1)).astype(np.uint8)
-        # side_image = (127.5 * (side_image + 1)).astype(np.uint8)
+        side_image = (127.5 * (side_image + 1)).astype(np.uint8)
 
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
-        # generated_image = (127.5 * (0.5 * self.generator.predict(side_image) + 0.5) + 1)).astype(np.uint8)
+        # generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+        generated_image = (127.5 * (0.5 * self.generator.predict(side_image) + 0.5) + 1).astype(np.uint8)
 
         plt.figure(figsize = (8, 2))
 
