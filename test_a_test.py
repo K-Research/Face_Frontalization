@@ -97,7 +97,7 @@ def batch_size():
 
 train_epochs = 10000
 test_epochs = 1
-train_batch_size = 1
+train_batch_size = batch_size()
 test_batch_size = batch_size()
 train_save_interval = 1
 test_save_interval = 1
@@ -135,7 +135,7 @@ class DCGAN():
         self.generator = self.build_generator()
 
         # The generator takes noise as input and generates imgs
-        z = Input(shape = (self.height, self.width, self.channels, ))
+        z = Input(shape = (self.height, self.width, self.channels))
         image = self.generator(z)
 
         # For the combined model we will only train the generator
@@ -154,24 +154,24 @@ class DCGAN():
     def build_generator(self):
         side_face = Input(shape = (self.height, self.width, self.channels))
 
-        conv2d_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(side_face)
+        conv2d_layer = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(side_face)
         activation_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(conv2d_layer)
 
-        blue_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  0])(activation_layer)
-        green_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  1])(activation_layer)
-        red_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  2])(activation_layer)
+        blue_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  ,  0])(activation_layer)
+        green_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  ,  1])(activation_layer)
+        red_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  ,  2])(activation_layer)
 
         blue_layer = (Flatten())(blue_split)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
-        blue_layer = Dense(1 * quarter_dimension * quarter_dimension)(blue_layer)
+        blue_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(blue_layer)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
-        blue_layer = Reshape((quarter_dimension, quarter_dimension, 1))(blue_layer)
+        blue_layer = Reshape((quarter_dimension, quarter_dimension, reshape_depth))(blue_layer)
         blue_layer = UpSampling2D()(blue_layer)
-        blue_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
+        blue_layer = Conv2D(filters = 32, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
         blue_layer = BatchNormalization(momentum = 0.8)(blue_layer)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
         blue_layer = UpSampling2D()(blue_layer)
-        blue_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
+        blue_layer = Conv2D(filters = 16, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
         blue_layer = BatchNormalization(momentum = 0.8)(blue_layer)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
         blue_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
@@ -179,15 +179,15 @@ class DCGAN():
 
         green_layer = (Flatten())(green_split)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
-        green_layer = Dense(1 * quarter_dimension * quarter_dimension)(green_layer)
+        green_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(green_layer)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
-        green_layer = Reshape((quarter_dimension, quarter_dimension, 1))(green_layer)
+        green_layer = Reshape((quarter_dimension, quarter_dimension, reshape_depth))(green_layer)
         green_layer = UpSampling2D()(green_layer)
-        green_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
+        green_layer = Conv2D(filters = 32, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
         green_layer = BatchNormalization(momentum = 0.8)(green_layer)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
         green_layer = UpSampling2D()(green_layer)
-        green_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
+        green_layer = Conv2D(filters = 16, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
         green_layer = BatchNormalization(momentum = 0.8)(green_layer)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
         green_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
@@ -195,15 +195,15 @@ class DCGAN():
 
         red_layer = (Flatten())(red_split)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
-        red_layer = Dense(1 * quarter_dimension * quarter_dimension)(red_layer)
+        red_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(red_layer)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
-        red_layer = Reshape((quarter_dimension, quarter_dimension, 1))(red_layer)
+        red_layer = Reshape((quarter_dimension, quarter_dimension, reshape_depth))(red_layer)
         red_layer = UpSampling2D()(red_layer)
-        red_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
+        red_layer = Conv2D(filters = 32, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
         red_layer = BatchNormalization(momentum = 0.8)(red_layer)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
         red_layer = UpSampling2D()(red_layer)
-        red_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
+        red_layer = Conv2D(filters = 16, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
         red_layer = BatchNormalization(momentum = 0.8)(red_layer)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
         red_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
@@ -213,7 +213,7 @@ class DCGAN():
 
         model = Model(side_face, concatenate_layer)
 
-        # model.summary()
+        model.summary()
         
         return model
 
