@@ -14,11 +14,11 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 25
+time = 1
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_28_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_28_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -140,8 +140,6 @@ class DCGAN():
         self.combined = Model(z, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
 
-        self.generator_first_filter = generator_first_filter()
-
     def build_generator(self):
         model = Sequential()
 
@@ -162,7 +160,7 @@ class DCGAN():
         model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(Activation('tanh'))
 
-        # model.summary()
+        model.summary()
         
         side_face = Input(shape = (self.height, self.width, self.channels))
         image = model(side_face)

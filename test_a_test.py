@@ -150,16 +150,17 @@ class DCGAN():
         self.combined = Model(z, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
 
-        self.generator_first_filter = generator_first_filter()
+        self.combined.summary()
 
     def build_generator(self):
-        side_face = Input(shape = (self.height, self.width, self.channels, ))
+        # input = Input(shape = (self.height, self.width, self.channels))
 
-        conv2d_layer = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(side_face)
+        # conv2d_layer = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(input)
+        conv2d_layer = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels))
         activation_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(conv2d_layer)
 
-        blue_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  ,  0])(activation_layer)
-        green_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  ,  1])(activation_layer)
+        blue_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  , 0])(activation_layer)
+        green_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  , 1])(activation_layer)
         red_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  ,  2])(activation_layer)
 
         blue_layer = (Flatten())(blue_split)
@@ -210,13 +211,13 @@ class DCGAN():
         red_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
         red_output = Activation('tanh')(red_layer)
 
-        # concatenate_layer = concatenate([blue_output, green_output, red_output], axis = -1)
         concatenate_layer = Concatenate()([blue_output, green_output, red_output])
 
-        model = Model(side_face, concatenate_layer)
+        # model = Model(input, concatenate_layer)
+        model = Model(conv2d_layer, concatenate_layer)
 
         model.summary()
-        
+
         return model
 
     def build_discriminator(self):
