@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 
-from keras.layers import Activation, BatchNormalization, concatenate, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Lambda, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
+from keras.layers import Activation, BatchNormalization, Concatenate, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Lambda, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam, Nadam
@@ -17,10 +17,10 @@ n_test_image = 2
 time = 51
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
-# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
-# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/y.npy') # Front face
+# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_28_x.npy') # Side face
+# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_28_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -134,8 +134,9 @@ class DCGAN():
         # Build the generator
         self.generator = self.build_generator()
 
-        # The generator takes noise as input and generates imgs
-        z = Input(shape = (self.height, self.width, self.channels))
+        # The generator takes noise as input and generates images
+        z = Input(shape = (self.height, self.width, self.channels, ))
+        # z = Input(shape = (self.height, self.width, self.channels)) # Modify
         image = self.generator(z)
 
         # For the combined model we will only train the generator
@@ -144,7 +145,7 @@ class DCGAN():
         # The discriminator takes generated images as input and determines validity
         valid = self.discriminator(image)
 
-        # The combined model  (stacked generator and discriminator)
+        # The combined model (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
         self.combined = Model(z, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
@@ -152,7 +153,7 @@ class DCGAN():
         self.generator_first_filter = generator_first_filter()
 
     def build_generator(self):
-        side_face = Input(shape = (self.height, self.width, self.channels))
+        side_face = Input(shape = (self.height, self.width, self.channels, ))
 
         conv2d_layer = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(side_face)
         activation_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(conv2d_layer)
@@ -209,7 +210,8 @@ class DCGAN():
         red_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(red_layer)
         red_output = Activation('tanh')(red_layer)
 
-        concatenate_layer = concatenate([blue_output, green_output, red_output], axis = -1)
+        # concatenate_layer = concatenate([blue_output, green_output, red_output], axis = -1)
+        concatenate_layer = Concatenate()([blue_output, green_output, red_output])
 
         model = Model(side_face, concatenate_layer)
 
@@ -259,10 +261,13 @@ class DCGAN():
                 # Select a random half of images
                 index = np.random.randint(0, X_train.shape[0], batch_size)
                 front_image = Y_train[index]
+                # print('front_image : ', front_image.shape) # (32, 128, 128, 3) # Modify
 
                 # Generate a batch of new images
                 side_image = X_train[index]
                 generated_image = self.generator.predict(side_image)
+                # print('side_image.shape : ', side_image.shape) # (32, 128, 128, 3) # Modify
+                # print('generated_image.shape : ', generated_image.shape) # (32, 128, 128, 3) # Modify
 
                 self.discriminator.trainable = True
 
@@ -274,10 +279,9 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                # print('side_image.shape : ', side_image.shape) # (32, 128, 128, 3)
-                # print('real.shape : ', real.shape) # (32, 1)
+                # print('side_image.shape : ', side_image.shape) # (32, 128, 128, 3) # Modify
+                # print('real.shape : ', real.shape) # (32, 1) # Modify
                 generator_loss = self.combined.train_on_batch(side_image, real)
-                # generator_loss = self.combined.train_on_batch(side_image, np.ones((batch_size, height, width, channels)))
                 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
@@ -316,7 +320,7 @@ class DCGAN():
                 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                        % (k, k, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+                        % (k + 1, k + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
                 # If at save interval -> save generated image samples
                 if i % save_interval == 0:
