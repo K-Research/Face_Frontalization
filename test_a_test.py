@@ -153,10 +153,9 @@ class DCGAN():
         self.combined.summary()
 
     def build_generator(self):
-        # input = Input(shape = (self.height, self.width, self.channels))
+        input = Input(shape = (self.height, self.width, self.channels))
 
-        # conv2d_layer = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(input)
-        conv2d_layer = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels))
+        conv2d_layer = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(input)
         activation_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(conv2d_layer)
 
         blue_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  , 0])(activation_layer)
