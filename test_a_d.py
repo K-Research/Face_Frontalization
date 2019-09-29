@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 
+from keras.backend import slice
 from keras.layers import Activation, BatchNormalization, Concatenate, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Lambda, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
@@ -11,10 +12,11 @@ import os
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 import sys
+import tensorflow as tf
 from tqdm import tqdm
 
 n_test_image = 2
-time = 51
+time = 28
 
 # Load data
 # X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
@@ -166,7 +168,7 @@ class DCGAN():
         green_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  , 1])(activation_layer)
         red_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  ,  2])(activation_layer)
 
-        blue_layer = (Flatten())(blue_split)
+        blue_layer = Flatten()(blue_split)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
         blue_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(blue_layer)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
@@ -180,9 +182,10 @@ class DCGAN():
         blue_layer = BatchNormalization(momentum = 0.8)(blue_layer)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
         blue_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
+        # blue_layer = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer) #
         blue_output= Activation('tanh')(blue_layer)
 
-        green_layer = (Flatten())(green_split)
+        green_layer = Flatten()(green_split)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
         green_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(green_layer)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
@@ -198,7 +201,7 @@ class DCGAN():
         green_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
         green_output = Activation('tanh')(green_layer)
 
-        red_layer = (Flatten())(red_split)
+        red_layer = Flatten()(red_split)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
         red_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(red_layer)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
@@ -218,7 +221,7 @@ class DCGAN():
 
         generate_model = Model(input, concatenate_layer)
 
-        # generate_model.summary()
+        generate_model.summary()
 
         return generate_model
 
