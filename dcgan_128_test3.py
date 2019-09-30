@@ -14,7 +14,7 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 52
+time = 53
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
@@ -88,7 +88,7 @@ def batch_size():
         return batch_size
         
 
-train_epochs = 100000
+train_epochs = 1000000
 test_epochs = 1
 # train_batch_size = batch_size()
 train_batch_size = 8
