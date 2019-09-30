@@ -311,8 +311,9 @@ class DCGAN():
                 
                 # Plot the progress
                 # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                #         % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not lis
-                
+                #         % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not list
+                print ('\nTraining epoch : %d \nTraining batch : %d  ' % (i + 1, j + 1))
+
                 # If at save interval -> save generated image samples
                 if j % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
