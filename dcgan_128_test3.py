@@ -14,11 +14,11 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 46
+time = 48
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -292,7 +292,7 @@ class DCGAN():
                 # Generate a batch of new images
                 side_image = X_train[index]
                 
-                generated_image = self.generator.predict(side_image)
+                generated_image = self.generator.predict(front_image)
 
                 self.discriminator.trainable = True
 
@@ -305,7 +305,7 @@ class DCGAN():
 
                 # Train the generator (wants discriminator to mistake images as real)
                 # generator_loss = self.combined.train_on_batch(side_image, real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real]) #
+                generator_loss = self.combined.train_on_batch(front_image, [front_image, real]) #
                 
                 # Plot the progress
                 # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
