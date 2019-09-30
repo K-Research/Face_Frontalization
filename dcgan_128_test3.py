@@ -88,7 +88,7 @@ def batch_size():
         return batch_size
         
 
-train_epochs = 10000
+train_epochs = 100000
 test_epochs = 1
 # train_batch_size = batch_size()
 train_batch_size = 8
@@ -278,7 +278,7 @@ class DCGAN():
                 # Plot the progress
                 # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
                 #         % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not list
-                print ('\nTraining epoch : %d \nTraining batch : %d  ' % (i + 1, j + 1))
+                print ('\nTraining epoch : %d \nTraining batch : %d' % (i + 1, j + 1))
 
                 # If at save interval -> save generated image samples
                 if j % save_interval == 0:
