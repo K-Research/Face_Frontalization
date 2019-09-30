@@ -151,24 +151,6 @@ class DCGAN():
     def build_generator(self):
         model = Sequential()
 
-        # model.add(Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
-        # model.add(Flatten())
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(Dense(64 * 7 * 7))
-
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(Reshape((7, 7, 64)))
-        # model.add(UpSampling2D())
-        # model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(UpSampling2D())
-        # model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(Activation('tanh'))
-
         model.add(Conv2D(filters = 16, kernel_size = (4, 4), strides = (2, 2), padding = 'same', input_shape = (self.height, self.width, self.channels)))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(filters = 32, kernel_size = (4, 4), strides = (2, 2), padding = 'valid'))
