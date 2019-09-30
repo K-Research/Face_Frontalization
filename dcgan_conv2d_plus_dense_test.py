@@ -14,11 +14,11 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 41
+time = 42
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_28_x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_28_y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_64_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_64_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -151,12 +151,15 @@ class DCGAN():
         model = Sequential()
 
         # model.add(Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
-        model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
+        model.add(Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
         # model.add(Flatten())
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         # model.add(Dense(128 * 7 * 7))
         # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         # model.add(Reshape((7, 7, 128)))
+        model.add(MaxPooling2D(pool_size = (2, 2)))
+        model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(MaxPooling2D(pool_size = (2, 2)))
         model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
@@ -178,6 +181,9 @@ class DCGAN():
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(UpSampling2D())
         model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        model.add(Conv2D(256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
