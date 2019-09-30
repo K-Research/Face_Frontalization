@@ -307,7 +307,7 @@ class DCGAN():
 
                 # Train the generator (wants discriminator to mistake images as real)
                 # generator_loss = self.combined.train_on_batch(side_image, real)
-                generator_loss = self.combined.train_on_batch(front_image, [front_image, real]) #
+                generator_loss = self.combined.train_on_batch(side_image, [front_image, real]) #
                 
                 # Plot the progress
                 # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
