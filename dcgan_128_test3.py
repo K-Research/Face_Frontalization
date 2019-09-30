@@ -14,13 +14,13 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 50
+time = 52
 
 # Load data
-# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_x.npy') # Side face
-# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
+# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
+# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -111,36 +111,34 @@ def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shar
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
 
 # Residual block
-def res_block_gen(model, kernal_size, filters, strides):
+def res_block_gen(model, kernel_size, filters, strides):
     gen = model
 
-    model = Conv2D(filters=filters, kernel_size=kernal_size, strides=strides, padding="same")(model)
-    model = BatchNormalization(momentum=0.5)(model)
+    model = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
+    model = BatchNormalization(momentum = 0.5)(model)
     # Using Parametric ReLU
-    model = PReLU(alpha_initializer='zeros', alpha_regularizer=None, alpha_constraint=None, shared_axes=[1, 2])(model)
-    model = Conv2D(filters=filters, kernel_size=kernal_size, strides=strides, padding="same")(model)
-    model = BatchNormalization(momentum=0.5)(model)
+    model = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(model)
+    model = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'same')(model)
+    model = BatchNormalization(momentum = 0.5)(model)
 
     model = add([gen, model])
 
     return model
 
-
-def up_sampling_block(model, kernal_size, filters, strides):
+def up_sampling_block(model, kernel_size, filters, strides):
     # In place of Conv2D and UpSampling2D we can also use Conv2DTranspose (Both are used for Deconvolution)
     # Even we can have our own function for deconvolution (i.e one made in Utils.py)
-    # model = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = "same")(model)
-    model = Conv2D(filters=filters, kernel_size=kernal_size, strides=strides, padding="same")(model)
-    model = UpSampling2D(size=2)(model)
-    model = LeakyReLU(alpha=0.2)(model)
+    # model = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = 'same)(model)
+    model = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
+    model = UpSampling2D(size = 2)(model)
+    model = LeakyReLU(alpha = 0.2)(model)
 
     return model
 
-
 def discriminator_block(model, filters, kernel_size, strides):
-    model = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding="same")(model)
-    model = BatchNormalization(momentum=0.5)(model)
-    model = LeakyReLU(alpha=0.2)(model)
+    model = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
+    model = BatchNormalization(momentum = 0.5)(model)
+    model = LeakyReLU(alpha = 0.2)(model)
 
     return model
 
@@ -182,63 +180,31 @@ class DCGAN():
         # self.combined.summary()
 
     def build_generator(self):
-        # model = Sequential()
-
-        # model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(MaxPooling2D(pool_size = (2, 2))) # (32, 32)
-        # model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(MaxPooling2D(pool_size = (2, 2))) # (16, 16)
-        # model.add(Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(MaxPooling2D(pool_size = (2, 2))) # (8, 8)
-        # model.add(Conv2D(filters = 512, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(MaxPooling2D(pool_size = (2, 2))) # (4, 4)
-        # model.add(Conv2D(filters = 1024, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(UpSampling2D()) # (8, 8)
-        # model.add(Conv2D(filters = 512, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(UpSampling2D()) # (16, 16)
-        # model.add(Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(UpSampling2D()) # (32, 32)
-        # model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(UpSampling2D()) # (64, 64)
-        # model.add(Conv2D(filters = self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(Activation('tanh'))
-
-        # model.summary()
-        
-        # side_face = Input(shape = (self.height, self.width, self.channels))
-        # image = model(side_face)
-        
-        # return Model(side_face, image)
-
         gen_input = Input(shape = (self.height, self.width, self.channels))
 
-        model = Conv2D(filters = 64, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(gen_input)
+        model = Conv2D(filters = 16, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(gen_input)
         model = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(model)
+        model = MaxPooling2D(pool_size = (2, 2))(model) #
+        model = Conv2D(filters = 32, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(model) #
+        model = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(model) #
+        model = MaxPooling2D(pool_size = (2, 2))(model) #
+        model = Conv2D(filters = 64, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(model) #
+        model = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(model) #
+        model = MaxPooling2D(pool_size = (2, 2))(model) #
 
         gen_model = model
 
         # Using 16 Residual Blocks
         for index in range(16):
-            model = res_block_gen(model, 3, 64, 1)
+            model = res_block_gen(model = model, kernel_size = 3, filters = 64, strides = 1)
 
         model = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(model)
         model = BatchNormalization(momentum = 0.5)(model)
         model = add([gen_model, model])
 
-        # # Using 2 UpSampling Blocks
-        # for index in range(2):
-        #     model = up_sampling_block(model, 3, 256, 1)
+        # Using 2 UpSampling Blocks
+        for index in range(3):
+            model = up_sampling_block(model = model, kernel_size = 3, filters = 256, strides = 1)
 
         model = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(model)
         model = Activation('tanh')(model)
