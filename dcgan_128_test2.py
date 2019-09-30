@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 
-from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam, Nadam
@@ -14,7 +14,7 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 44
+time = 46
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_x.npy') # Side face
@@ -26,7 +26,7 @@ Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_y.npy'
 X_test = np.load('D:/Bitcamp/Project/Frontalization/Numpy/lsm_x.npy') # Side face
 # Y_test = np.load('‪D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy') # Front face
 Y_test_path = 'D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy'
-Y_test = np.load(Y_test_path.split('\u202a')[0])
+Y_test = np.load(Y_test_path.split('\u202a')[0]) # Front face
 
 X_test_list = [] #
 Y_test_list = [] #
@@ -88,7 +88,8 @@ def batch_size():
 
 train_epochs = 10000
 test_epochs = 1
-train_batch_size = batch_size()
+# train_batch_size = batch_size()
+train_batch_size = 8
 test_batch_size = batch_size()
 train_save_interval = 1
 test_save_interval = 1
@@ -106,6 +107,40 @@ def generator_first_filter():
 
 def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
+
+# Residual block
+def res_block_gen(model, kernal_size, filters, strides):
+    gen = model
+
+    model = Conv2D(filters=filters, kernel_size=kernal_size, strides=strides, padding="same")(model)
+    model = BatchNormalization(momentum=0.5)(model)
+    # Using Parametric ReLU
+    model = PReLU(alpha_initializer='zeros', alpha_regularizer=None, alpha_constraint=None, shared_axes=[1, 2])(model)
+    model = Conv2D(filters=filters, kernel_size=kernal_size, strides=strides, padding="same")(model)
+    model = BatchNormalization(momentum=0.5)(model)
+
+    model = add([gen, model])
+
+    return model
+
+
+def up_sampling_block(model, kernal_size, filters, strides):
+    # In place of Conv2D and UpSampling2D we can also use Conv2DTranspose (Both are used for Deconvolution)
+    # Even we can have our own function for deconvolution (i.e one made in Utils.py)
+    # model = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = "same")(model)
+    model = Conv2D(filters=filters, kernel_size=kernal_size, strides=strides, padding="same")(model)
+    model = UpSampling2D(size=2)(model)
+    model = LeakyReLU(alpha=0.2)(model)
+
+    return model
+
+
+def discriminator_block(model, filters, kernel_size, strides):
+    model = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding="same")(model)
+    model = BatchNormalization(momentum=0.5)(model)
+    model = LeakyReLU(alpha=0.2)(model)
+
+    return model
 
 class DCGAN():
     def __init__(self):
@@ -126,11 +161,9 @@ class DCGAN():
         self.generator = self.build_generator()
 
         # The generator takes noise as input and generates imgs
-        z = Input(shape = (self.height, self.width, self.channels, ))
+        # z = Input(shape = (self.height, self.width, self.channels, ))
+        z = Input(shape = (self.height, self.width, self.channels))
         image = self.generator(z)
-
-        # print('z.shape : ', z.shape) # (?, 28, 28, 3)
-        # print('image.shape : ', image.shape) # (?, 28, 28, 3)
 
         # For the combined model we will only train the generator
         self.discriminator.trainable = False
@@ -138,39 +171,81 @@ class DCGAN():
         # The discriminator takes generated images as input and determines validity
         valid = self.discriminator(image)
 
-        # print('valid.shape : ', valid.shape) # (?, 1)
-
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, valid)
+        # self.combined = Model(z, valid)
+        self.combined = Model(z, [image, valid]) #
         self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
 
         # self.combined.summary()
 
     def build_generator(self):
-        model = Sequential()
+        # model = Sequential()
 
-        model.add(Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
-        model.add(Flatten())
-        model.add(Dense(128 * 32 * 32))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Reshape((32, 32, 128)))
-        model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(UpSampling2D())
-        model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        model.add(Activation('tanh'))
-        
+        # model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(MaxPooling2D(pool_size = (2, 2))) # (32, 32)
+        # model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(MaxPooling2D(pool_size = (2, 2))) # (16, 16)
+        # model.add(Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(MaxPooling2D(pool_size = (2, 2))) # (8, 8)
+        # model.add(Conv2D(filters = 512, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(MaxPooling2D(pool_size = (2, 2))) # (4, 4)
+        # model.add(Conv2D(filters = 1024, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(UpSampling2D()) # (8, 8)
+        # model.add(Conv2D(filters = 512, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(BatchNormalization(momentum = 0.8))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(UpSampling2D()) # (16, 16)
+        # model.add(Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(BatchNormalization(momentum = 0.8))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(UpSampling2D()) # (32, 32)
+        # model.add(Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(BatchNormalization(momentum = 0.8))
+        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
+        # model.add(UpSampling2D()) # (64, 64)
+        # model.add(Conv2D(filters = self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        # model.add(Activation('tanh'))
+
         # model.summary()
         
-        side_face = Input(shape = (self.height, self.width, self.channels))
-        image = model(side_face)
+        # side_face = Input(shape = (self.height, self.width, self.channels))
+        # image = model(side_face)
         
-        return Model(side_face, image)
+        # return Model(side_face, image)
+
+        gen_input = Input(shape = (self.height, self.width, self.channels))
+
+        model = Conv2D(filters = 64, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(gen_input)
+        model = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(model)
+
+        gen_model = model
+
+        # Using 16 Residual Blocks
+        for index in range(16):
+            model = res_block_gen(model, 3, 64, 1)
+
+        model = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(model)
+        model = BatchNormalization(momentum = 0.5)(model)
+        model = add([gen_model, model])
+
+        # # Using 2 UpSampling Blocks
+        # for index in range(2):
+        #     model = up_sampling_block(model, 3, 256, 1)
+
+        model = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(model)
+        model = Activation('tanh')(model)
+
+        generator_model = Model(inputs = gen_input, outputs = model)
+
+        # generator_model.summary()
+
+        return generator_model
 
     def build_discriminator(self):
         model = Sequential()
@@ -214,15 +289,10 @@ class DCGAN():
                 index = np.random.randint(0, X_train.shape[0], batch_size)
                 front_image = Y_train[index]
 
-                # print('front_image : ', front_image.shape) # (28, 28, 28, 3)
-
                 # Generate a batch of new images
                 side_image = X_train[index]
                 
                 generated_image = self.generator.predict(side_image)
-
-                # print('side_image.shape : ', side_image.shape) # (28, 28, 28, 3)
-                # print('generated_image.shape : ', generated_image.shape) # (28, 28, 28, 3)
 
                 self.discriminator.trainable = True
 
@@ -234,11 +304,12 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, real)
+                # generator_loss = self.combined.train_on_batch(side_image, real)
+                generator_loss = self.combined.train_on_batch(side_image, [front_image, real]) #
                 
                 # Plot the progress
-                print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                        % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+                # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
+                #         % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not lis
                 
                 # If at save interval -> save generated image samples
                 if j % save_interval == 0:
@@ -283,12 +354,8 @@ class DCGAN():
     def save_image(self, image_index, front_image, side_image, save_path):
         global number
 
-        # front_image = (127.5 * (front_image + 1)).astype(np.uint8)
-        # side_image = (127.5 * (side_image + 1)).astype(np.uint8)
-
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
-        # generated_image = (127.5 * (0.5 * self.generator.predict(side_image) + 0.5) + 1)).astype(np.uint8)
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)

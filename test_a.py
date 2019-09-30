@@ -146,7 +146,8 @@ class DCGAN():
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, valid)
+        # self.combined = Model(z, valid)
+        self.combined = Model(z, [image, valid])
         self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
 
         self.generator_first_filter = generator_first_filter()
@@ -161,7 +162,7 @@ class DCGAN():
         green_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  1])(activation_layer)
         red_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  2])(activation_layer)
 
-        blue_layer = (Flatten())(blue_split)
+        blue_layer = Flatten()(blue_split)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
         blue_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(blue_layer)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
@@ -177,7 +178,7 @@ class DCGAN():
         blue_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
         blue_output= Activation('tanh')(blue_layer)
 
-        green_layer = (Flatten())(green_split)
+        green_layer = Flatten()(green_split)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
         green_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(green_layer)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
@@ -193,7 +194,7 @@ class DCGAN():
         green_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
         green_output = Activation('tanh')(green_layer)
 
-        red_layer = (Flatten())(red_split)
+        red_layer = Flatten()(red_split)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
         red_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(red_layer)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
@@ -276,7 +277,8 @@ class DCGAN():
                 # Train the generator (wants discriminator to mistake images as real)
                 # print('side_image.shape : ', side_image.shape) # (32, 128, 128, 3)
                 # print('real.shape : ', real.shape) # (32, 1)
-                generator_loss = self.combined.train_on_batch(side_image, real)
+                # generator_loss = self.combined.train_on_batch(side_image, real)
+                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
                 # generator_loss = self.combined.train_on_batch(side_image, np.ones((batch_size, height, width, channels)))
                 
                 # Plot the progress

@@ -14,13 +14,13 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 2
-time = 51
+time = 46
 
 # Load data
-# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_28_x.npy') # Side face
-# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_28_y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
+# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
+# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -134,9 +134,9 @@ class DCGAN():
         # Build the generator
         self.generator = self.build_generator()
 
-        # The generator takes noise as input and generates images
-        z = Input(shape = (self.height, self.width, self.channels, ))
-        # z = Input(shape = (self.height, self.width, self.channels)) # Modify
+        # The generator takes noise as input and generates imgs
+        # z = Input(shape = (self.height, self.width, self.channels, ))
+        z = Input(shape = (self.height, self.width, self.channels)) #
         image = self.generator(z)
 
         # For the combined model we will only train the generator
@@ -145,24 +145,25 @@ class DCGAN():
         # The discriminator takes generated images as input and determines validity
         valid = self.discriminator(image)
 
-        # The combined model (stacked generator and discriminator)
+        # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, valid)
+        # self.combined = Model(z, valid)
+        self.combined = Model(inputs = z, outputs = [image, valid])
         self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
 
-        self.combined.summary()
+        self.generator_first_filter = generator_first_filter()
 
     def build_generator(self):
-        input = Input(shape = (self.height, self.width, self.channels))
+        side_face = Input(shape = (self.height, self.width, self.channels))
 
-        conv2d_layer = Conv2D(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(input)
+        conv2d_layer = Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same')(side_face)
         activation_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(conv2d_layer)
 
-        blue_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  , 0])(activation_layer)
-        green_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  , 1])(activation_layer)
-        red_split = Lambda(lambda side_image : activation_layer[  :  ,  :  ,  :  ,  2])(activation_layer)
+        blue_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  0])(activation_layer)
+        green_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  1])(activation_layer)
+        red_split = Lambda(lambda side_image : conv2d_layer[  :  ,  :  ,  :  ,  2])(activation_layer)
 
-        blue_layer = (Flatten())(blue_split)
+        blue_layer = Flatten()(blue_split)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
         blue_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(blue_layer)
         blue_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(blue_layer)
@@ -178,7 +179,7 @@ class DCGAN():
         blue_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(blue_layer)
         blue_output= Activation('tanh')(blue_layer)
 
-        green_layer = (Flatten())(green_split)
+        green_layer = Flatten()(green_split)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
         green_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(green_layer)
         green_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(green_layer)
@@ -194,7 +195,7 @@ class DCGAN():
         green_layer = Conv2D(filters = 1, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(green_layer)
         green_output = Activation('tanh')(green_layer)
 
-        red_layer = (Flatten())(red_split)
+        red_layer = Flatten()(red_split)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
         red_layer = Dense(reshape_depth * quarter_dimension * quarter_dimension)(red_layer)
         red_layer = Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))(red_layer)
@@ -212,11 +213,10 @@ class DCGAN():
 
         concatenate_layer = Concatenate()([blue_output, green_output, red_output])
 
-        # model = Model(input, concatenate_layer)
-        model = Model(conv2d_layer, concatenate_layer)
+        model = Model(side_face, concatenate_layer)
 
-        model.summary()
-
+        # model.summary()
+        
         return model
 
     def build_discriminator(self):
@@ -261,13 +261,10 @@ class DCGAN():
                 # Select a random half of images
                 index = np.random.randint(0, X_train.shape[0], batch_size)
                 front_image = Y_train[index]
-                # print('front_image : ', front_image.shape) # (32, 128, 128, 3) # Modify
 
                 # Generate a batch of new images
                 side_image = X_train[index]
                 generated_image = self.generator.predict(side_image)
-                # print('side_image.shape : ', side_image.shape) # (32, 128, 128, 3) # Modify
-                # print('generated_image.shape : ', generated_image.shape) # (32, 128, 128, 3) # Modify
 
                 self.discriminator.trainable = True
 
@@ -279,9 +276,11 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                # print('side_image.shape : ', side_image.shape) # (32, 128, 128, 3) # Modify
-                # print('real.shape : ', real.shape) # (32, 1) # Modify
-                generator_loss = self.combined.train_on_batch(side_image, real)
+                # print('side_image.shape : ', side_image.shape) # (32, 128, 128, 3)
+                # print('real.shape : ', real.shape) # (32, 1)
+                # generator_loss = self.combined.train_on_batch(side_image, real)
+                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
+                # generator_loss = self.combined.train_on_batch(side_image, np.ones((batch_size, height, width, channels)))
                 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
@@ -320,7 +319,7 @@ class DCGAN():
                 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                        % (k + 1, k + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+                        % (k, k, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
                 # If at save interval -> save generated image samples
                 if i % save_interval == 0:

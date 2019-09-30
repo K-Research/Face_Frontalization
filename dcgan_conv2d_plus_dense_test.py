@@ -14,7 +14,7 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 44
+time = 46
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_x.npy') # Side face
@@ -126,7 +126,8 @@ class DCGAN():
         self.generator = self.build_generator()
 
         # The generator takes noise as input and generates imgs
-        z = Input(shape = (self.height, self.width, self.channels, ))
+        # z = Input(shape = (self.height, self.width, self.channels, ))
+        z = Input(shape = (self.height, self.width, self.channels))
         image = self.generator(z)
 
         # print('z.shape : ', z.shape) # (?, 28, 28, 3)
