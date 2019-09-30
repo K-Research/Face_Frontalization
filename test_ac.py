@@ -15,11 +15,11 @@ import torch.nn as nn
 from tqdm import tqdm
 
 n_test_image = 28
-time = 34
+time = 35
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_28_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_28_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -87,7 +87,7 @@ def batch_size():
         return batch_size
         
 
-train_epochs = 1000000000000
+train_epochs = 10000000000
 test_epochs = 1
 train_batch_size = batch_size()
 test_batch_size = batch_size()
@@ -151,59 +151,22 @@ class DCGAN():
     def build_generator(self):
         model = Sequential()
 
-        # model.add(Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
-        # model.add(Flatten())
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(Dense(64 * 7 * 7))
-
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(Reshape((7, 7, 64)))
-        # model.add(UpSampling2D())
-        # model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(UpSampling2D())
-        # model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(BatchNormalization(momentum = 0.8))
-        # model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        # model.add(Activation('tanh'))
-
-        model.add(Conv2D(filters = 16, kernel_size = (4, 4), strides = (2, 2), padding = 'same', input_shape = (self.height, self.width, self.channels)))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2D(filters = 32, kernel_size = (4, 4), strides = (2, 2), padding = 'valid'))
+        model.add(Conv2D(filters = generator_first_filter(), kernel_size = (3, 3), strides = (1, 1), padding = 'same', input_shape = (self.height, self.width, self.channels)))
+        model.add(Flatten())
+        model.add(Activation('relu'))
+        model.add(Dense(128 * 7 * 7))
+        model.add(Activation('relu'))
+        model.add(Reshape((7, 7, 128)))
+        model.add(UpSampling2D())
+        model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2D(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid'))
+        model.add(Activation('relu'))
+        model.add(UpSampling2D())
+        model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2D(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2D(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2D(filters = 512, kernel_size = (1, 1), strides = (1, 1), padding = 'valid'))
-        model.add(MaxPooling2D(pool_size = (2, 2))) # At this point, we arrive at our low D representation vector, which is 512 dimensional
-        model.add(Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same', use_bias = None))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid', use_bias = None))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid', use_bias = None))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2DTranspose(filters = 32, kernel_size = (4, 4), strides = (2, 2), padding = 'valid', use_bias = None))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2DTranspose(filters = 16, kernel_size = (4, 4), strides = (2, 2), padding = 'valid', use_bias = None))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        model.add(Conv2DTranspose(filters = self.channels, kernel_size = (6, 6), strides = (2, 2), padding = 'valid', use_bias = None))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(Activation('tanh'))
+        model.add(Activation('relu'))
+        model.add(Conv2D(self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(Activation('tanh'))
 
         model.summary()
         
