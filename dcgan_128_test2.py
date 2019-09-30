@@ -14,7 +14,7 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 44
+time = 49
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_x.npy') # Side face
@@ -137,7 +137,8 @@ class DCGAN():
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, valid)
+        # self.combined = Model(z, valid)
+        self.combined = Model(z, [image, valid]) #
         self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
 
         # self.combined.summary()
@@ -239,11 +240,12 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, real)
+                # generator_loss = self.combined.train_on_batch(side_image, real)
+                generator_loss = self.combined.train_on_batch(front_image, [front_image, real]) #
                 
                 # Plot the progress
-                print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                        % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+                # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
+                #         % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
                 
                 # If at save interval -> save generated image samples
                 if j % save_interval == 0:

@@ -14,11 +14,13 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 48
+time = 50
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
+# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_x.npy') # Side face
+# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/monochrome_128_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
