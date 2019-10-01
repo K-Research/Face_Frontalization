@@ -287,6 +287,8 @@ class DCGAN():
                 # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
                 #         % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not list
                 print ('\nTraining epoch : %d \nTraining batch : %d' % (i + 1, j + 1))
+                print('\ndiscriminator_loss : ', discriminator_loss)
+                print('\ngenerator_loss', generator_loss)
 
                 # If at save interval -> save generated image samples
                 if j % save_interval == 0:
@@ -320,8 +322,8 @@ class DCGAN():
                 generator_loss = self.combined.test_on_batch(side_image, real)
                 
                 # Plot the progress
-                print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                        % (k, k, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+                # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
+                #         % (k, k, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
                 # If at save interval -> save generated image samples
                 if i % save_interval == 0:
