@@ -219,7 +219,7 @@ class DCGAN():
 
         generator_model = Model(inputs = gen_input, outputs = model)
 
-        generator_model.summary()
+        # generator_model.summary()
 
         return generator_model
 
