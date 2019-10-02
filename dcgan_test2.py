@@ -196,7 +196,7 @@ class DCGAN():
         previous_output = layer
 
         # Using 16 Residual Blocks
-        for index in range(16):
+        for i in range(16):
             layer = residual_block(model = layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
 
         layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(layer)
@@ -204,7 +204,7 @@ class DCGAN():
         layer = add([previous_output, layer])
 
         # Using 2 UpSampling Blocks
-        for index in range(3):
+        for j in range(3):
             layer = up_sampling_block(model = layer, filters = 256, kernel_size = 3, strides = 1)
 
         layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(layer)
@@ -254,8 +254,8 @@ class DCGAN():
 
         print('Training')
 
-        for i in range(epochs):
-            for j in tqdm(range(batch_size)):
+        for k in range(epochs):
+            for l in tqdm(range(batch_size)):
                 # Select a random half of images
                 index = np.random.randint(0, X_train.shape[0], batch_size)
                 front_image = Y_train[index]
@@ -282,15 +282,15 @@ class DCGAN():
                 # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
                 #         % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not list
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                record = (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 history.append(record)
 
                 # If at save interval -> save generated image samples
-                if j % save_interval == 0:
+                if l % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
-                    self.save_image(image_index = j, front_image = front_image, side_image = side_image, save_path = save_path)
+                    self.save_image(image_index = l, front_image = front_image, side_image = side_image, save_path = save_path)
 
         history = np.array(history)
 
@@ -312,8 +312,8 @@ class DCGAN():
 
         print('Testing')
 
-        for k in range(epochs):
-            for l in tqdm(range(batch_size)):
+        for m in range(epochs):
+            for n in tqdm(range(batch_size)):
                 # Select a random half of images
                 index = np.random.randint(0, X_test.shape[0], batch_size)
                 front_image = Y_test[index]
@@ -333,15 +333,15 @@ class DCGAN():
                 
                 # Plot the progress
                 print ('\nTest epoch : %d \nTest batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 history.append(record)
 
                 # If at save interval -> save generated image samples
-                if i % save_interval == 0:
+                if n % save_interval == 0:
                     save_path = 'D:/Generated Image/Testing' + str(time) + '/'
-                    self.save_image(image_index = l, front_image = front_image, side_image = side_image, save_path = save_path)
+                    self.save_image(image_index = n, front_image = front_image, side_image = side_image, save_path = save_path)
 
         history = np.array(history)
 
