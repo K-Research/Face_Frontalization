@@ -304,6 +304,8 @@ class DCGAN():
         # plt.show()
 
     def test(self, epochs, batch_size, save_interval):
+        global history
+
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
         real = np.ones((batch_size, 1))
@@ -333,7 +335,7 @@ class DCGAN():
                 print ('\nTest epoch : %d \nTest batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
                         % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                record = (j + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 history.append(record)
 
                 # If at save interval -> save generated image samples
