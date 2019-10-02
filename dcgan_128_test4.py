@@ -14,7 +14,7 @@ import sys
 from tqdm import tqdm
 
 n_test_image = 28
-time = 54
+time = 56
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
@@ -74,6 +74,7 @@ optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 
 n_show_image = 1 # Number of images to show
 
+history = []
 number = 0
 
 def batch_size():
@@ -88,10 +89,9 @@ def batch_size():
         return batch_size
         
 
-train_epochs = 1000000
+train_epochs = 100
 test_epochs = 1
-# train_batch_size = batch_size()
-train_batch_size = 8
+train_batch_size = batch_size()
 test_batch_size = batch_size()
 train_save_interval = 1
 test_save_interval = 1
@@ -253,6 +253,8 @@ class DCGAN():
         return Model(image, validity)
 
     def train(self, epochs, batch_size, save_interval):
+        global history
+
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
         real = np.ones((batch_size, 1))
@@ -286,14 +288,27 @@ class DCGAN():
                 # Plot the progress
                 # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
                 #         % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not list
-                print ('\nTraining epoch : %d \nTraining batch : %d' % (i + 1, j + 1))
-                print('\ndiscriminator_loss : ', discriminator_loss)
-                print('\ngenerator_loss', generator_loss)
+                print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
+                        % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+
+                record = (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                history.append(record)
 
                 # If at save interval -> save generated image samples
                 if j % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(image_index = j, front_image = front_image, side_image = side_image, save_path = save_path)
+
+        history = np.array(history)
+
+        self.history(history = history, save_path = save_path)
+
+        # plt.plot(history[:, 3])
+        # plt.plot(history[:, 4])
+        # plt.xlabel('Epoch')
+        # plt.ylabel('Loss')
+        # plt.legend(['Loss of discriminator', 'Loss of generator'], loc = 'upper left')
+        # plt.show()
 
     def test(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
@@ -387,9 +402,37 @@ class DCGAN():
         # Check folder presence
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
+
         save_name = '%d.png' % number
         save_name = os.path.join(save_path, save_name)
+    
         plt.savefig(save_name)
+        plt.close()
+
+    def history(self, history, save_path):
+        plt.plot(history[:, 2])     
+        plt.plot(history[:, 3])
+        plt.plot(history[:, 4])
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Generative adversarial network')
+        plt.legend(['Accuracy of discriminator', 'Loss of discriminator', 'Loss of generator'], loc = 'upper left')
+
+        figure = plt.gcf()
+
+        plt.show()
+
+        save_path = save_path
+
+        # Check folder presence
+        if not os.path.isdir(save_path):
+            os.makedirs(save_path)
+
+        # save_name = '%d.png' % number
+        save_name = 'History.png'
+        save_name = os.path.join(save_path, save_name)
+
+        figure.savefig(save_name)
         plt.close()
 
 if __name__ == '__main__':
