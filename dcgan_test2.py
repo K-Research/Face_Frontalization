@@ -13,41 +13,29 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
-n_test_image = 2
 time = 59
 
 # Load data
-# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/origin_crop_x.npy') # Side face
-# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/origin_crop_y.npy') # Front face
+# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/origin_crop_x.npy') # Side face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/kr_crop_x.npy') # Side face
+# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/origin_crop_y.npy') # Front face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/kr_crop_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
 
-X_test = np.load('D:/Bitcamp/Project/Frontalization/Numpy/lsm_x.npy') # Side face
-# Y_test = np.load('‪D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy') # Front face
-Y_test_path = 'D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy'
-Y_test = np.load(Y_test_path.split('\u202a')[0]) # Front face
+X_train, X_test, Y_train, Y_test = train_test_split(X_train, Y_train, test_size = 0.01, random_state = 66, shuffle = True)
 
-X_test_list = [] #
-Y_test_list = [] #
-
-for i in range(n_test_image): #
-    X_test_list.append(X_test) #
-    Y_test_list.append(Y_test) #
-
-X_test = np.array(X_test_list) #
-Y_test = np.array(Y_test_list) #
-
+# print(X_train.shape)
+# print(Y_train.shape)
 # print(X_test.shape)
 # print(Y_test.shape)
 
 # Rescale -1 to 1
 X_train = X_train / 127.5 - 1.
 Y_train = Y_train / 127.5 - 1.
-# X_test = X_test / 127.5 - 1.
-# Y_test = Y_test / 127.5 - 1.
+X_test = X_test / 127.5 - 1.
+Y_test = Y_test / 127.5 - 1.
 
 # Shuffle
 X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
@@ -295,13 +283,6 @@ class DCGAN():
         history = np.array(history)
 
         self.history(history = history, save_path = save_path)
-
-        # plt.plot(history[:, 3])
-        # plt.plot(history[:, 4])
-        # plt.xlabel('Epoch')
-        # plt.ylabel('Loss')
-        # plt.legend(['Loss of discriminator', 'Loss of generator'], loc = 'upper left')
-        # plt.show()
 
     def test(self, epochs, batch_size, save_interval):
         global history
