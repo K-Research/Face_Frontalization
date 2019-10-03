@@ -13,12 +13,10 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
-time = 59
+time = 1
 
 # Load data
-# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/origin_crop_x.npy') # Side face
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/kr_crop_x.npy') # Side face
-# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/origin_crop_y.npy') # Front face
 Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/kr_crop_y.npy') # Front face
 
 # print(X_train.shape)
@@ -37,7 +35,7 @@ Y_train = Y_train / 127.5 - 1.
 X_test = X_test / 127.5 - 1.
 Y_test = Y_test / 127.5 - 1.
 
-# Shuffle
+# # Shuffle
 # X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
 # X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
@@ -119,7 +117,7 @@ def up_sampling_block(model, filters, kernel_size, strides):
     # Even we can have our own function for deconvolution (i.e one made in Utils.py)
     # layer = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = 'same)(layer)
     layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
-    layer = UpSampling2D(size = 2)(layer)
+    layer = UpSampling2D(size = (2, 2))(layer)
     layer = LeakyReLU(alpha = 0.2)(layer)
 
     return layer
@@ -263,7 +261,6 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                # generator_loss = self.combined.train_on_batch(side_image, real)
                 generator_loss = self.combined.train_on_batch(side_image, [front_image, real]) #
                 
                 # Plot the progress
@@ -411,7 +408,6 @@ class DCGAN():
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
 
-        # save_name = '%d.png' % number
         save_name = 'History.png'
         save_name = os.path.join(save_path, save_name)
 
@@ -421,4 +417,4 @@ class DCGAN():
 if __name__ == '__main__':
     dcgan = DCGAN()
     dcgan.train(epochs = train_epochs, batch_size = train_batch_size, save_interval = train_save_interval)
-    # dcgan.test(epochs = test_epochs, batch_size = test_batch_size, save_interval = test_save_interval)
+    dcgan.test(epochs = test_epochs, batch_size = test_batch_size, save_interval = test_save_interval)
