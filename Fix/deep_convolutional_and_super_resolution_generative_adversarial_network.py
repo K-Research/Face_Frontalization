@@ -16,8 +16,8 @@ from tqdm import tqdm
 time = 1
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/kr_crop_x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/kr_crop_y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/kr_crop_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/kr_crop_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -135,8 +135,7 @@ class DCGAN():
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        # self.combined = Model(z, valid)
-        self.combined = Model(z, [image, valid]) #
+        self.combined = Model(z, [image, valid])
         self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
 
         # self.combined.summary()
@@ -236,11 +235,9 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real]) #
+                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
                 
                 # Plot the progress
-                # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                #         % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not list
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
                         % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 

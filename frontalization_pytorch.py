@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 
-from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam, Nadam
@@ -11,11 +11,9 @@ import os
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 import sys
-import torch.nn as nn
 from tqdm import tqdm
 
-n_test_image = 28
-time = 100
+time = 60
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/color_128_x.npy') # Side face
@@ -24,31 +22,18 @@ Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/color_128_y
 # print(X_train.shape)
 # print(Y_train.shape)
 
-# X_test = np.load('D:/Bitcamp/Project/Frontalization/Numpy/lsm_x.npy') # Side face
-# # Y_test = np.load('‪D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy') # Front face
-# Y_test_path = 'D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy'
-# Y_test = np.load(Y_test_path.split('\u202a')[0])
-
-# X_test_list = [] #
-# Y_test_list = [] #
-
-# for i in range(n_test_image): #
-#     X_test_list.append(X_test) #
-#     Y_test_list.append(Y_test) #
-
-# X_test = np.array(X_test_list) #
-# Y_test = np.array(Y_test_list) #
-
+# print(X_train.shape)
+# print(Y_train.shape)
 # print(X_test.shape)
 # print(Y_test.shape)
 
 # Rescale -1 to 1
-# X_train = X_train / 127.5 - 1.
-# Y_train = Y_train / 127.5 - 1.
+X_train = X_train / 127.5 - 1.
+Y_train = Y_train / 127.5 - 1.
 # X_test = X_test / 127.5 - 1.
 # Y_test = Y_test / 127.5 - 1.
 
-# Shuffle
+# # Shuffle
 X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
 # X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
@@ -57,10 +42,6 @@ height = X_train.shape[1]
 width = X_train.shape[2]
 channels = X_train.shape[3]
 latent_dimension = width
-
-quarter_height = int(np.round(np.round(height / 2) / 2))
-quarter_width = int(np.round(np.round(width / 2) / 2))
-half_latent_dimension = int(np.round(latent_dimension / 2))
 
 # print(height)
 # print(width)
@@ -73,6 +54,7 @@ optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 
 n_show_image = 1 # Number of images to show
 
+history = []
 number = 0
 
 def batch_size():
@@ -86,24 +68,12 @@ def batch_size():
 
         return batch_size
         
-
-train_epochs = 1000000000000
+train_epochs = 10000
 test_epochs = 1
 train_batch_size = batch_size()
 test_batch_size = batch_size()
 train_save_interval = 1
 test_save_interval = 1
-
-def generator_first_filter():
-    if latent_dimension > 64:
-        generator_first_filter = 64
-
-        return generator_first_filter
-
-    else:
-        generator_first_filter = latent_dimension
-
-        return generator_first_filter
 
 def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
@@ -127,19 +97,15 @@ class DCGAN():
         self.generator = self.build_generator()
 
         # The generator takes noise as input and generates imgs
-        z = Input(shape = (self.height, self.width, self.channels, ))
+        # z = Input(shape = (self.height, self.width, self.channels, ))
+        z = Input(shape = (self.height, self.width, self.channels))
         image = self.generator(z)
-
-        # print('z.shape : ', z.shape) # (?, 28, 28, 3)
-        # print('image.shape : ', image.shape) # (?, 28, 28, 3)
 
         # For the combined model we will only train the generator
         self.discriminator.trainable = False
 
         # The discriminator takes generated images as input and determines validity
         valid = self.discriminator(image)
-
-        # print('valid.shape : ', valid.shape) # (?, 1)
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
@@ -187,7 +153,7 @@ class DCGAN():
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
         model.add(Activation('tanh'))
 
-        model.summary()
+        # model.summary()
         
         side_face = Input(shape = (self.height, self.width, self.channels, ))
         image = model(side_face)
@@ -224,27 +190,24 @@ class DCGAN():
         return Model(image, validity)
 
     def train(self, epochs, batch_size, save_interval):
+        global history
+
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
         real = np.ones((batch_size, 1))
 
         print('Training')
 
-        for i in range(epochs):
-            for j in tqdm(range(batch_size)):
+        for k in range(epochs):
+            for l in tqdm(range(batch_size)):
                 # Select a random half of images
                 index = np.random.randint(0, X_train.shape[0], batch_size)
                 front_image = Y_train[index]
-
-                # print('front_image : ', front_image.shape) # (28, 28, 28, 3)
 
                 # Generate a batch of new images
                 side_image = X_train[index]
                 
                 generated_image = self.generator.predict(side_image)
-
-                # print('side_image.shape : ', side_image.shape) # (28, 28, 28, 3)
-                # print('generated_image.shape : ', generated_image.shape) # (28, 28, 28, 3)
 
                 self.discriminator.trainable = True
 
@@ -260,22 +223,33 @@ class DCGAN():
                 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                        % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
-                
+                        % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not list
+                # print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
+                #         % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+
+                record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
+                history.append(record)
+
                 # If at save interval -> save generated image samples
-                if j % save_interval == 0:
+                if l % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
-                    self.save_image(image_index = j, front_image = front_image, side_image = side_image, save_path = save_path)
+                    self.save_image(image_index = l, front_image = front_image, side_image = side_image, save_path = save_path)
+
+        history = np.array(history)
+
+        self.history(history = history, save_path = save_path)
 
     def test(self, epochs, batch_size, save_interval):
+        global history
+
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
         real = np.ones((batch_size, 1))
 
         print('Testing')
 
-        for k in range(epochs):
-            for l in tqdm(range(batch_size)):
+        for m in range(epochs):
+            for n in tqdm(range(batch_size)):
                 # Select a random half of images
                 index = np.random.randint(0, X_test.shape[0], batch_size)
                 front_image = Y_test[index]
@@ -291,26 +265,32 @@ class DCGAN():
                 discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.test_on_batch(side_image, real)
+                generator_loss = self.combined.test_on_batch(side_image, [front_image, real])
                 
                 # Plot the progress
-                print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                        % (k, k, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+                print ('\nTest epoch : %d \nTest batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
+                        % (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+
+                record = (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                history.append(record)
 
                 # If at save interval -> save generated image samples
-                if i % save_interval == 0:
+                if n % save_interval == 0:
                     save_path = 'D:/Generated Image/Testing' + str(time) + '/'
-                    self.save_image(image_index = l, front_image = front_image, side_image = side_image, save_path = save_path)
+                    self.save_image(image_index = n, front_image = front_image, side_image = side_image, save_path = save_path)
+
+        history = np.array(history)
+
+        self.history(history = history, save_path = save_path)
 
     def save_image(self, image_index, front_image, side_image, save_path):
         global number
 
-        # front_image = (127.5 * (front_image + 1)).astype(np.uint8)
-        # side_image = (127.5 * (side_image + 1)).astype(np.uint8)
-
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
-        # generated_image = (127.5 * (0.5 * self.generator.predict(side_image) + 0.5) + 1)).astype(np.uint8) # Modify
+
+        front_image = (127.5 * (front_image + 1)).astype(np.uint8)
+        side_image = (127.5 * (side_image + 1)).astype(np.uint8)
 
         plt.figure(figsize = (8, 2))
 
@@ -360,9 +340,36 @@ class DCGAN():
         # Check folder presence
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
+
         save_name = '%d.png' % number
         save_name = os.path.join(save_path, save_name)
+    
         plt.savefig(save_name)
+        plt.close()
+
+    def history(self, history, save_path):
+        plt.plot(history[:, 2])     
+        plt.plot(history[:, 3])
+        plt.plot(history[:, 4])
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Generative adversarial network')
+        plt.legend(['Accuracy of discriminator', 'Loss of discriminator', 'Loss of generator'], loc = 'upper left')
+
+        figure = plt.gcf()
+
+        plt.show()
+
+        save_path = save_path
+
+        # Check folder presence
+        if not os.path.isdir(save_path):
+            os.makedirs(save_path)
+
+        save_name = 'History.png'
+        save_name = os.path.join(save_path, save_name)
+
+        figure.savefig(save_name)
         plt.close()
 
 if __name__ == '__main__':
