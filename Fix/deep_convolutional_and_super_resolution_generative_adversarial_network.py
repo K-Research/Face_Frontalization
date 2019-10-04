@@ -43,10 +43,6 @@ width = X_train.shape[2]
 channels = X_train.shape[3]
 latent_dimension = width
 
-quarter_height = int(np.round(np.round(height / 2) / 2))
-quarter_width = int(np.round(np.round(width / 2) / 2))
-half_latent_dimension = int(np.round(latent_dimension / 2))
-
 # print(height)
 # print(width)
 # print(quarter_height)
@@ -79,17 +75,6 @@ test_batch_size = batch_size()
 train_save_interval = 1
 test_save_interval = 1
 
-def generator_first_filter():
-    if latent_dimension > 64:
-        generator_first_filter = 64
-
-        return generator_first_filter
-
-    else:
-        generator_first_filter = latent_dimension
-
-        return generator_first_filter
-
 def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
 
@@ -115,13 +100,6 @@ def up_sampling_block(model, filters, kernel_size, strides):
     # layer = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = 'same)(layer)
     layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
     layer = UpSampling2D(size = (2, 2))(layer)
-    layer = LeakyReLU(alpha = 0.2)(layer)
-
-    return layer
-
-def discriminator_block(model, filters, kernel_size, strides):
-    layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
-    layer = BatchNormalization(momentum = 0.5)(layer)
     layer = LeakyReLU(alpha = 0.2)(layer)
 
     return layer
