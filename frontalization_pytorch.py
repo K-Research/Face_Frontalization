@@ -223,9 +223,7 @@ class DCGAN():
                 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                        % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not list
-                # print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                #         % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
                 record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
                 history.append(record)
@@ -268,10 +266,10 @@ class DCGAN():
                 generator_loss = self.combined.test_on_batch(side_image, [front_image, real])
                 
                 # Plot the progress
-                print ('\nTest epoch : %d \nTest batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
+                        % (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
-                record = (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
                 history.append(record)
 
                 # If at save interval -> save generated image samples
