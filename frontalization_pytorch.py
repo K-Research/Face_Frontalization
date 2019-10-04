@@ -15,29 +15,29 @@ import torch.nn as nn
 from tqdm import tqdm
 
 n_test_image = 28
-time = 34
+time = 100
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/color_128_y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/color_128_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/color_128_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
 
-X_test = np.load('D:/Bitcamp/Project/Frontalization/Numpy/lsm_x.npy') # Side face
-# Y_test = np.load('‪D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy') # Front face
-Y_test_path = 'D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy'
-Y_test = np.load(Y_test_path.split('\u202a')[0])
+# X_test = np.load('D:/Bitcamp/Project/Frontalization/Numpy/lsm_x.npy') # Side face
+# # Y_test = np.load('‪D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy') # Front face
+# Y_test_path = 'D:/Bitcamp/Project/Frontalization/Numpy/lsm_y.npy'
+# Y_test = np.load(Y_test_path.split('\u202a')[0])
 
-X_test_list = [] #
-Y_test_list = [] #
+# X_test_list = [] #
+# Y_test_list = [] #
 
-for i in range(n_test_image): #
-    X_test_list.append(X_test) #
-    Y_test_list.append(Y_test) #
+# for i in range(n_test_image): #
+#     X_test_list.append(X_test) #
+#     Y_test_list.append(Y_test) #
 
-X_test = np.array(X_test_list) #
-Y_test = np.array(Y_test_list) #
+# X_test = np.array(X_test_list) #
+# Y_test = np.array(Y_test_list) #
 
 # print(X_test.shape)
 # print(Y_test.shape)
@@ -50,7 +50,7 @@ Y_test = np.array(Y_test_list) #
 
 # Shuffle
 X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
-X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
+# X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
 # Prameters
 height = X_train.shape[1]
@@ -185,7 +185,7 @@ class DCGAN():
         model.add(Conv2DTranspose(filters = self.channels, kernel_size = (6, 6), strides = (2, 2), padding = 'valid', use_bias = None))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(Activation(paramertic_relu(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])))
-        # model.add(Activation('tanh'))
+        model.add(Activation('tanh'))
 
         model.summary()
         

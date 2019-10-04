@@ -13,13 +13,13 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
-time = 59
+time = 60
 
 # Load data
-# X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/origin_crop_x.npy') # Side face
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/kr_crop_x.npy') # Side face
-# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/origin_crop_y.npy') # Front face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/kr_crop_y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/origin_crop_x.npy') # Side face
+# X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/kr_crop_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/origin_crop_y.npy') # Front face
+# Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/kr_crop_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)

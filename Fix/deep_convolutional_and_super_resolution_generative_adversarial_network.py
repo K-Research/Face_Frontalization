@@ -22,8 +22,6 @@ Y_train = np.load('D:/Bitcamp/Project/Frontalization/Numpy/kr_crop_y.npy') # Fro
 # print(X_train.shape)
 # print(Y_train.shape)
 
-X_train, X_test, Y_train, Y_test = train_test_split(X_train, Y_train, test_size = 0.01, random_state = 66, shuffle = True)
-
 # print(X_train.shape)
 # print(Y_train.shape)
 # print(X_test.shape)
@@ -32,11 +30,11 @@ X_train, X_test, Y_train, Y_test = train_test_split(X_train, Y_train, test_size 
 # Rescale -1 to 1
 X_train = X_train / 127.5 - 1.
 Y_train = Y_train / 127.5 - 1.
-X_test = X_test / 127.5 - 1.
-Y_test = Y_test / 127.5 - 1.
+# X_test = X_test / 127.5 - 1.
+# Y_test = Y_test / 127.5 - 1.
 
 # # Shuffle
-# X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
+X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
 # X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
 # Prameters
@@ -74,7 +72,6 @@ def batch_size():
 
         return batch_size
         
-
 train_epochs = 10000
 test_epochs = 1
 train_batch_size = batch_size()
