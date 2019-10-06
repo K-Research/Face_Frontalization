@@ -37,7 +37,7 @@ Y_train = Y_train / 127.5 - 1.
 # Y_test = Y_test / 127.5 - 1.
 
 # # Shuffle
-# X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
+X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
 # X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
 # Prameters
@@ -221,7 +221,7 @@ class DCGAN():
         print('Training')
 
         for k in range(epochs): #
-            for l in tqdm(range(569)): #
+            for l in tqdm(range(568)): #
                 for m in range(batch_size): #
                     # Select a random half of images
                     # index = np.random.randint(0, X_train.shape[0], batch_size)
@@ -231,8 +231,7 @@ class DCGAN():
                     for n in range(start, end): #
                         index.append(n) #
 
-                    index = np.array(index) #
-
+                    # index = np.array(index) #
                     front_image = Y_train[index]
 
                     # Generate a batch of new images
@@ -267,8 +266,8 @@ class DCGAN():
                     start += 8 #
                     end += 8 #
 
-            start = 0
-            end = 0
+                start = 0
+                end = 0
 
         history = np.array(history)
 
