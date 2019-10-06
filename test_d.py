@@ -220,9 +220,9 @@ class DCGAN():
 
         print('Training')
 
-        for k in range(epochs): #
-            for l in tqdm(range(568)): #
-                for m in range(batch_size): #
+        for k in range(epochs):
+            for l in tqdm(range(70)):
+                for m in range(batch_size):
                     # Select a random half of images
                     # index = np.random.randint(0, X_train.shape[0], batch_size)
 
@@ -232,6 +232,8 @@ class DCGAN():
                         index.append(n) #
 
                     # index = np.array(index) #
+                    print(index)
+
                     front_image = Y_train[index]
 
                     # Generate a batch of new images
@@ -266,8 +268,8 @@ class DCGAN():
                     start += 8 #
                     end += 8 #
 
-                start = 0
-                end = 0
+            start = 0
+            end = 0
 
         history = np.array(history)
 
