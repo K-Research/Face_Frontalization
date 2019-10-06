@@ -232,7 +232,6 @@ class DCGAN():
                         index.append(n) #
 
                     # index = np.array(index) #
-                    print(index)
 
                     front_image = Y_train[index]
 
@@ -321,6 +320,8 @@ class DCGAN():
 
     def save_image(self, image_index, front_image, side_image, save_path):
         global number
+
+        print(image_index)
 
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
