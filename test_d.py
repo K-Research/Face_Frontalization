@@ -20,7 +20,7 @@ end = 8
 
 # Load data
 X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
-Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Front face
+Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -74,7 +74,7 @@ def batch_size():
 train_epochs = 10000
 test_epochs = 1
 # train_batch_size = batch_size()
-train_batch_size = 596 
+train_batch_size = 8
 test_batch_size = batch_size()
 train_save_interval = 1
 test_save_interval = 1
@@ -254,9 +254,9 @@ class DCGAN():
                     
                     # Plot the progress
                     print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                            % (l + 1, m + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                            % (k + 1, l+ 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                    record = (l + 1, m + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                    record = (k + 1, l + 1, m + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                     history.append(record)
 
                     # If at save interval -> save generated image samples
@@ -383,9 +383,9 @@ class DCGAN():
         plt.close()
 
     def history(self, history, save_path):
-        plt.plot(history[:, 2])     
-        plt.plot(history[:, 3])
+        plt.plot(history[:, 3])     
         plt.plot(history[:, 4])
+        plt.plot(history[:, 5])
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.title('Generative adversarial network')
