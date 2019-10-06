@@ -22,7 +22,7 @@ end = 8
 X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
 Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
 
-# print(X_train.shape)
+print(X_train.shape)
 # print(Y_train.shape)
 
 # print(X_train.shape)
@@ -221,7 +221,7 @@ class DCGAN():
         print('Training')
 
         for k in range(epochs):
-            for l in tqdm(range(70)):
+            for l in tqdm(range(71)):
                 for m in range(batch_size):
                     # Select a random half of images
                     # index = np.random.randint(0, X_train.shape[0], batch_size)
@@ -268,8 +268,8 @@ class DCGAN():
                     start += 8 #
                     end += 8 #
 
-            start = 0
-            end = 0
+                start = 0
+                end = 0
 
         history = np.array(history)
 
