@@ -15,11 +15,11 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
-time = 1
+time = 63
 
 # Load data
-X_train = np.load('D:/Bitcamp/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
