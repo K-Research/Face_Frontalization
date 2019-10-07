@@ -18,8 +18,8 @@ from tqdm import tqdm
 time = 1
 
 # Load data
-X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
-Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
+X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
+Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
