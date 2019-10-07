@@ -22,7 +22,7 @@ X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
 
 # print(X_train.shape)
-# print(Y_train.shape)
+print(Y_train.shape)
 
 # print(X_train.shape)
 # print(Y_train.shape)
