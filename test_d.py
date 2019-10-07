@@ -376,7 +376,7 @@ class DCGAN():
 
         figure = plt.gcf()
 
-        plt.show()
+        # plt.show()
 
         save_path = save_path
 
