@@ -1,5 +1,7 @@
 from __future__ import print_function, division
 
+from keras.applications.vgg19 import VGG19
+import keras.backend as K
 from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
@@ -13,7 +15,7 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
-time = 61
+time = 62
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
@@ -24,8 +26,6 @@ Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy'
 # print(X_train.shape)
 # print(Y_train.shape)
 
-X_train, X_test, Y_train, Y_test = train_test_split(X_train, Y_train, test_size = 0.01, random_state = 66, shuffle = True)
-
 # print(X_train.shape)
 # print(Y_train.shape)
 # print(X_test.shape)
@@ -34,8 +34,8 @@ X_train, X_test, Y_train, Y_test = train_test_split(X_train, Y_train, test_size 
 # Rescale -1 to 1
 X_train = X_train / 127.5 - 1.
 Y_train = Y_train / 127.5 - 1.
-X_test = X_test / 127.5 - 1.
-Y_test = Y_test / 127.5 - 1.
+# X_test = X_test / 127.5 - 1.
+# Y_test = Y_test / 127.5 - 1.
 
 # Shuffle
 # X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
@@ -84,16 +84,20 @@ test_batch_size = batch_size()
 train_save_interval = 1
 test_save_interval = 1
 
-def generator_first_filter():
-    if latent_dimension > 64:
-        generator_first_filter = 64
+# computes VGG loss or content loss
+def vgg19_loss(y_true, y_pred):
+    vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (height, width, channels))
+    # Make trainable as False
 
-        return generator_first_filter
+    vgg19.trainable = False
 
-    else:
-        generator_first_filter = latent_dimension
+    for a in vgg19.layers:
+        a.trainable = False
+    
+    model = Model(inputs = vgg19.input, outputs = vgg19.get_layer('block5_conv4').output)
+    model.trainable = False
 
-        return generator_first_filter
+    return K.mean(K.square(model(y_true) - model(y_pred)))
 
 def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
     PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
@@ -146,8 +150,9 @@ class DCGAN():
         self.discriminator = self.build_discriminator()
         self.discriminator.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 
-        # Build the generator
+        # Build and compile the generator
         self.generator = self.build_generator()
+        self.generator.compile(loss = vgg19_loss, optimizer = optimizer)
 
         # The generator takes noise as input and generates imgs
         # z = Input(shape = (self.height, self.width, self.channels, ))
@@ -162,9 +167,8 @@ class DCGAN():
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        # self.combined = Model(z, valid)
-        self.combined = Model(z, [image, valid]) #
-        self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
+        self.combined = Model(z, [image, valid])
+        self.combined.compile(loss = [vgg19_loss, 'binary_crossentropy'], loss_weights=[1., 1e-3], optimizer = optimizer)
 
         # self.combined.summary()
 
@@ -250,6 +254,8 @@ class DCGAN():
 
                 # Generate a batch of new images
                 side_image = X_train[index]
+
+                # optimizer.zero_grad()
                 
                 generated_image = self.generator.predict(side_image)
 
@@ -259,16 +265,13 @@ class DCGAN():
                 discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
                 discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
                 discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
-
+                
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                # generator_loss = self.combined.train_on_batch(side_image, real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real]) #
-                
+                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
+
                 # Plot the progress
-                # print ('\nTraining epoch : %d \nTraining batch : %d  \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f'
-                #         % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)) # TypeError: must be real number, not list
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
                         % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
