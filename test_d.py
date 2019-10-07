@@ -1,5 +1,7 @@
 from __future__ import print_function, division
 
+from keras.applications.vgg19 import VGG19
+import keras.backend as K
 from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
@@ -16,8 +18,8 @@ from tqdm import tqdm
 time = 1
 
 # Load data
-X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
-Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
+X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
+Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -33,8 +35,8 @@ Y_train = Y_train / 127.5 - 1.
 # X_test = X_test / 127.5 - 1.
 # Y_test = Y_test / 127.5 - 1.
 
-# # Shuffle
-X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
+# Shuffle
+# X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
 # X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
 # Prameters
@@ -45,8 +47,6 @@ latent_dimension = width
 
 # print(height)
 # print(width)
-# print(quarter_height)
-# print(quarter_width)
 # print(channels)
 # print(latent_dimension)
 
@@ -67,42 +67,13 @@ def batch_size():
         batch_size = latent_dimension
 
         return batch_size
-        
+
 train_epochs = 10000
 test_epochs = 1
 train_batch_size = batch_size()
 test_batch_size = batch_size()
 train_save_interval = 1
 test_save_interval = 1
-
-def paramertic_relu(alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
-    PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
-
-# Residual block
-def residual_block(model, filters, kernel_size, strides):
-    generator = model
-
-    layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(generator)
-    layer = BatchNormalization(momentum = 0.5)(layer)
-
-    # Using Parametric ReLU
-    layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-    layer = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'same')(layer)
-    output = BatchNormalization(momentum = 0.5)(layer)
-
-    model = add([generator, output])
-
-    return model
-
-def up_sampling_block(model, filters, kernel_size, strides):
-    # In place of Conv2D and UpSampling2D we can also use Conv2DTranspose (Both are used for Deconvolution)
-    # Even we can have our own function for deconvolution (i.e one made in Utils.py)
-    # layer = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = 'same)(layer)
-    layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
-    layer = UpSampling2D(size = (2, 2))(layer)
-    layer = LeakyReLU(alpha = 0.2)(layer)
-
-    return layer
 
 class DCGAN():
     def __init__(self):
@@ -119,11 +90,11 @@ class DCGAN():
         self.discriminator = self.build_discriminator()
         self.discriminator.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
 
-        # Build the generator
+        # Build and compile the generator
         self.generator = self.build_generator()
+        self.generator.compile(loss = self.vgg19_loss, optimizer = optimizer)
 
         # The generator takes noise as input and generates imgs
-        # z = Input(shape = (self.height, self.width, self.channels, ))
         z = Input(shape = (self.height, self.width, self.channels))
         image = self.generator(z)
 
@@ -136,14 +107,64 @@ class DCGAN():
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
         self.combined = Model(z, [image, valid])
-        self.combined.compile(loss = 'binary_crossentropy', optimizer = optimizer)
+        self.combined.compile(loss = [self.vgg19_loss, 'binary_crossentropy'], loss_weights=[1., 1e-3], optimizer = optimizer)
 
         # self.combined.summary()
+
+    def discriminator_block(self, model, filters, kernel_size, strides):
+        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
+        layer = BatchNormalization(momentum = 0.5)(layer)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+
+        return layer
+
+    def paramertic_relu(self, alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
+        PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
+
+    def residual_block(self, model, filters, kernel_size, strides):
+        generator = model
+
+        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(generator)
+        layer = BatchNormalization(momentum = 0.5)(layer)
+
+        # Using Parametric ReLU
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'same')(layer)
+        output = BatchNormalization(momentum = 0.5)(layer)
+
+        model = add([generator, output])
+
+        return model
+
+    def up_sampling_block(self, model, filters, kernel_size, strides):
+        # In place of Conv2D and UpSampling2D we can also use Conv2DTranspose (Both are used for Deconvolution)
+        # Even we can have our own function for deconvolution (i.e one made in Utils.py)
+        # layer = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = 'same)(layer)
+        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
+        layer = UpSampling2D(size = (2, 2))(layer)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+
+        return layer
+    
+    # computes VGG loss or content loss
+    def vgg19_loss(self, true, prediction):
+        vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (height, width, channels))
+        # Make trainable as False
+
+        vgg19.trainable = False
+
+        for layer in vgg19.layers:
+            layer.trainable = False
+        
+        model = Model(inputs = vgg19.input, outputs = vgg19.get_layer('block5_conv4').output)
+        model.trainable = False
+
+        return K.mean(K.square(model(true) - model(prediction)))
 
     def build_generator(self):
         input = Input(shape = (self.height, self.width, self.channels))
 
-        layer = Conv2D(filters = 16, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(input)
+        layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(input)
         layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
         layer = MaxPooling2D(pool_size = (2, 2))(layer) #
         layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer) #
@@ -157,7 +178,7 @@ class DCGAN():
 
         # Using 16 Residual Blocks
         for i in range(16):
-            layer = residual_block(model = layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
+            layer = self.residual_block(model = layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
 
         layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(layer)
         layer = BatchNormalization(momentum = 0.5)(layer)
@@ -165,7 +186,7 @@ class DCGAN():
 
         # Using 2 UpSampling Blocks
         for j in range(3):
-            layer = up_sampling_block(model = layer, filters = 256, kernel_size = 3, strides = 1)
+            layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = 3, strides = 1)
 
         layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(layer)
         output = Activation('tanh')(layer)
@@ -180,25 +201,21 @@ class DCGAN():
         model = Sequential()
 
         model.add(Conv2D(32, kernel_size = (3, 3), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        # model.add(LeakyReLU(alpha = 0.2))
-        model.add(PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))
-        # model.add(Dropout(0.25))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
         model.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
         model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(LeakyReLU(alpha = 0.2))
-        model.add(PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))
-        # model.add(Dropout(0.25))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
         model.add(Conv2D(128, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(LeakyReLU(alpha = 0.2))
-        model.add(PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))
-        # model.add(Dropout(0.25))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
         model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
-        # model.add(LeakyReLU(alpha = 0.2))
-        model.add(PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2]))
-        # model.add(Dropout(0.25))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
         model.add(Flatten())
         model.add(Dense(1, activation = 'sigmoid'))
 
@@ -226,6 +243,8 @@ class DCGAN():
 
                 # Generate a batch of new images
                 side_image = X_train[index]
+
+                # optimizer.zero_grad()
                 
                 generated_image = self.generator.predict(side_image)
 
@@ -235,12 +254,12 @@ class DCGAN():
                 discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
                 discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
                 discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
-
+                
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
                 generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
-                
+
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
                         % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
@@ -384,6 +403,7 @@ class DCGAN():
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
 
+        # save_name = '%d.png' % number
         save_name = 'History.png'
         save_name = os.path.join(save_path, save_name)
 
@@ -393,4 +413,4 @@ class DCGAN():
 if __name__ == '__main__':
     dcgan = DCGAN()
     dcgan.train(epochs = train_epochs, batch_size = train_batch_size, save_interval = train_save_interval)
-    dcgan.test(epochs = test_epochs, batch_size = test_batch_size, save_interval = test_save_interval)
+    # dcgan.test(epochs = test_epochs, batch_size = test_batch_size, save_interval = test_save_interval)
