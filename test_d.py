@@ -68,7 +68,7 @@ def batch_size():
 
         return batch_size
 
-train_epochs = 10000
+train_epochs = 50000
 test_epochs = 1
 train_batch_size = batch_size()
 test_batch_size = batch_size()
