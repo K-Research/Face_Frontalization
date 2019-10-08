@@ -31,7 +31,7 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 
 train_epochs = 100000
 test_epochs = 1
-train_batch_size = 4
+train_batch_size = 8
 test_batch_size = 1
 train_save_interval = 1
 test_save_interval = 1
@@ -338,7 +338,8 @@ class DCGAN():
 
     def save_image(self, image_index, front_image, side_image, save_path):
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator_AB.predict(side_image) + 0.5 # Modify
+        generated_image_AB = 0.5 * self.generator_AB.predict(side_image) + 0.5 # Modify
+        generated_image_BA = 0.5 * self.generator_BA.predict(front_image) + 0.5 # Modify
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
@@ -350,16 +351,25 @@ class DCGAN():
 
         # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
         for m in range(self.n_show_image):
-            generated_image_plot = plt.subplot(1, 3, m + 1 + (2 * self.n_show_image))
-            generated_image_plot.set_title('Generated image (front image)')
+            generated_image_AB_plot = plt.subplot(1, 4, m + 1 + (2 * self.n_show_image))
+            generated_image_AB_plot.set_title('Generated image (front image)')
 
             if self.channels == 1:
-                plt.imshow(generated_image[image_index,  :  ,  :  , 0], cmap = 'gray')
+                plt.imshow(generated_image_AB[image_index,  :  ,  :  , 0], cmap = 'gray')
             
             else:
-                plt.imshow(generated_image[image_index,  :  ,  :  ,  : ])
+                plt.imshow(generated_image_AB[image_index,  :  ,  :  ,  : ])
 
-            original_front_face_image_plot = plt.subplot(1, 3, m + 1 + self.n_show_image)
+            generated_image_BA_plot = plt.subplot(1, 4, m + 1 + (3 * self.n_show_image))
+            generated_image_BA_plot.set_title('Generated image (side image)')
+
+            if self.channels == 1:
+                plt.imshow(generated_image_BA[image_index,  :  ,  :  , 0], cmap = 'gray')
+            
+            else:
+                plt.imshow(generated_image_BA[image_index,  :  ,  :  ,  : ])
+
+            original_front_face_image_plot = plt.subplot(1, 4, m + 1 + self.n_show_image)
             original_front_face_image_plot.set_title('Origninal front image')
 
             if self.channels == 1:
@@ -368,7 +378,7 @@ class DCGAN():
             else:
                 plt.imshow(front_image[image_index])
 
-            original_side_face_image_plot = plt.subplot(1, 3, m + 1)
+            original_side_face_image_plot = plt.subplot(1, 4, m + 1)
             original_side_face_image_plot.set_title('Origninal side image')
 
             if self.channels == 1:
@@ -378,7 +388,8 @@ class DCGAN():
                 plt.imshow(side_image[image_index])
 
             # Don't show axis of x and y
-            generated_image_plot.axis('off')
+            generated_image_AB_plot.axis('off')
+            generated_image_BA_plot.axis('off')
             original_front_face_image_plot.axis('off')
             original_side_face_image_plot.axis('off')
 
