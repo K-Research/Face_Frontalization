@@ -23,9 +23,6 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 
 # print(X_train.shape)
 # print(Y_train.shape)
-
-# print(X_train.shape)
-# print(Y_train.shape)
 # print(X_test.shape)
 # print(Y_test.shape)
 
