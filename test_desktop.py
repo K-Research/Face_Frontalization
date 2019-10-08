@@ -29,10 +29,10 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 # X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
 # X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
-train_epochs = 10000
+train_epochs = 100000
 test_epochs = 1
-train_batch_size = 32
-test_batch_size = 32
+train_batch_size = 4
+test_batch_size = 1
 train_save_interval = 1
 test_save_interval = 1
 
@@ -238,8 +238,8 @@ class DCGAN():
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
-        fake = np.zeros((batch_size, 1))
-        real = np.ones((batch_size, 1))
+        fake = np.zeros((batch_size, int(self.height / 2 ** 5), int(self.width / 2 ** 5), 1)) # Modify
+        real = np.ones((batch_size, int(self.height / 2 ** 5), int(self.width / 2 ** 5), 1)) # Modify
 
         print('Training')
 
@@ -293,47 +293,47 @@ class DCGAN():
 
         self.graph(history = self.history, save_path = save_path)
 
-    # def test(self, epochs, batch_size, save_interval):
-    #     # Adversarial ground truths
-    #     fake = np.zeros((batch_size, 1))
-    #     real = np.ones((batch_size, 1))
+    def test(self, epochs, batch_size, save_interval):
+        # Adversarial ground truths
+        fake = np.zeros((batch_size, 1))
+        real = np.ones((batch_size, 1))
 
-    #     print('Testing')
+        print('Testing')
 
-    #     for m in range(epochs):
-    #         for n in tqdm(range(batch_size)):
-    #             # Select a random half of images
-    #             index = np.random.randint(0, X_test.shape[0], batch_size)
-    #             front_image = Y_test[index]
+        for m in range(1, epochs + 1):
+            for n in tqdm(range(batch_size)):
+                # Select a random half of images
+                index = np.random.randint(0, X_test.shape[0], batch_size)
+                front_image = Y_test[index]
 
-    #             # Generate a batch of new images
-    #             side_image = X_test[index]
+                # Generate a batch of new images
+                side_image = X_test[index]
 
-    #             generated_image = self.generator.predict(side_image)
+                generated_image = self.generator.predict(side_image)
 
-    #             # Train the discriminator (real classified as ones and generated as zeros)
-    #             discriminator_fake_loss = self.discriminator.test_on_batch(generated_image, fake)
-    #             discriminator_real_loss = self.discriminator.test_on_batch(front_image, real)
-    #             discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
+                # Train the discriminator (real classified as ones and generated as zeros)
+                discriminator_fake_loss = self.discriminator.test_on_batch(generated_image, fake)
+                discriminator_real_loss = self.discriminator.test_on_batch(front_image, real)
+                discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
 
-    #             # Train the generator (wants discriminator to mistake images as real)
-    #             generator_loss = self.combined.test_on_batch(side_image, [front_image, real])
+                # Train the generator (wants discriminator to mistake images as real)
+                generator_loss = self.combined.test_on_batch(side_image, [front_image, real])
                 
-    #             # Plot the progress
-    #             print ('\nTest epoch : %d \nTest batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-    #                     % (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                # Plot the progress
+                print ('\nTest epoch : %d \nTest batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
+                        % (m, n, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-    #             record = (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
-    #             history.append(record)
+                record = (m, n, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                history.append(record)
 
-    #             # If at save interval -> save generated image samples
-    #             if n % save_interval == 0:
-    #                 save_path = 'D:/Generated Image/Testing' + str(time) + '/'
-    #                 self.save_image(image_index = n, front_image = front_image, side_image = side_image, save_path = save_path)
+                # If at save interval -> save generated image samples
+                if n % save_interval == 0:
+                    save_path = 'D:/Generated Image/Testing' + str(time) + '/'
+                    self.save_image(image_index = n, front_image = front_image, side_image = side_image, save_path = save_path)
 
-    #     history = np.array(history)
+        history = np.array(history)
 
-    #     self.history(history = history, save_path = save_path)
+        self.history(history = history, save_path = save_path)
 
     def save_image(self, image_index, front_image, side_image, save_path):
         # Rescale images 0 - 1
