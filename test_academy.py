@@ -329,7 +329,7 @@ class DCGAN():
             original_front_face_image_plot.axis('off')
             original_side_face_image_plot.axis('off')
 
-            number += 1
+            self.number += 1
 
             # plt.show()
 
