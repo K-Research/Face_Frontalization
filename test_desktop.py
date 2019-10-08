@@ -227,9 +227,10 @@ class DCGAN():
         layer = Conv2D(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(layer) # Modify
         layer = LeakyReLU(alpha = 0.2)(layer) # Modify
         # layer = InstanceNormalization()(layer) # Modify
+        layer = Flatten()(layer)
 
-        output = Conv2D(filters = 1, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(layer) # Modify
-
+        output = Dense(units = 1, activation = 'sigmoid')(layer)
+        
         discriminator_model = Model(input, output) # Modify
 
         # discriminator_model.summary() # Modify
@@ -238,8 +239,8 @@ class DCGAN():
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
-        fake = np.zeros((batch_size, int(self.height / 2 ** 5), int(self.width / 2 ** 5), 1)) # Modify
-        real = np.ones((batch_size, int(self.height / 2 ** 5), int(self.width / 2 ** 5), 1)) # Modify
+        fake = np.zeros((batch_size, 1)) # Modify
+        real = np.ones((batch_size, 1)) # Modify
 
         print('Training')
 
