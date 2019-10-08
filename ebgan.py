@@ -20,10 +20,6 @@ time = 63
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
 Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_y.npy') # Front face
-
-# print(X_train.shape)
-# print(Y_train.shape)
-
 # print(X_train.shape)
 # print(Y_train.shape)
 # print(X_test.shape)
