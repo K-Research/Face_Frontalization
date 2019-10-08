@@ -245,7 +245,7 @@ class DCGAN():
                     self.save_image(image_index = l, front_image = front_image, side_image = side_image, save_path = save_path)
 
             if k % 1 == 100:
-                self.generator.save(save_path + 'gan_epoch%d.h5' % k)
+                self.generator.save(save_path + 'generator_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
