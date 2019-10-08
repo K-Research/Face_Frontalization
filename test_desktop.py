@@ -141,7 +141,22 @@ class DCGAN():
         layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
         layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
         layer = MaxPooling2D(pool_size = (2, 2))(layer)
+        layer = Conv2D(filters = 128, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = MaxPooling2D(pool_size = (2, 2))(layer)
+        layer = Conv2D(filters = 256, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = MaxPooling2D(pool_size = (2, 2))(layer)
+        layer = Conv2D(filters = 512, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = MaxPooling2D(pool_size = (2, 2))(layer)
+        layer = Conv2D(filters = 1024, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = MaxPooling2D(pool_size = (2, 2))(layer)
 
+        previous_layer = layer
+
+        '''
         # Encoding
         encoding_layer = Conv2D(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(layer)
         encoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(encoding_layer)
@@ -158,20 +173,44 @@ class DCGAN():
         decoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(decoding_layer)
         decoding_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(decoding_layer)
         decoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(decoding_layer)
+        '''
 
         # Using 16 Residual Blocks
         for i in range(16):
-            layer = self.residual_block(model = layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
+            layer = self.residual_block(model = layer, filters = 1024, kernel_size = (2, 3), strides = (1, 1))
 
-        layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(layer)
+        layer = Conv2D(filters = 1024, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
         layer = BatchNormalization(momentum = 0.5)(layer)
-        layer = add([decoding_layer, layer])
+        layer = add([previous_layer, layer])
 
+        '''
         # Using 2 UpSampling Blocks
-        for j in range(3):
-            layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = 3, strides = 1)
+        for j in range():
+            layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = 2, strides = 1)
+        '''
+        layer = Conv2D(filters = 512, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = UpSampling2D(size = (2, 2))(layer)
+        layer = Conv2D(filters = 256, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = UpSampling2D(size = (2, 2))(layer)
+        layer = Conv2D(filters = 128, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = UpSampling2D(size = (2, 2))(layer)
+        layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = UpSampling2D(size = (2, 2))(layer)
+        layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = UpSampling2D(size = (2, 2))(layer)
+        layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = UpSampling2D(size = (2, 2))(layer)
+        layer = Conv2D(filters = 8, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = UpSampling2D(size = (2, 2))(layer)
+        layer = Conv2D(filters = self.channels, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
 
-        layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(layer)
         output = Activation('tanh')(layer)
 
         generator_model = Model(inputs = input, outputs = output)
