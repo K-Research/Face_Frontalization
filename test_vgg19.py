@@ -244,7 +244,7 @@ class DCGAN():
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(image_index = l, front_image = front_image, side_image = side_image, save_path = save_path)
 
-            if k % 1 == 100:
+            if k % 100 == 0:
                 self.generator.save(save_path + 'generator_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
