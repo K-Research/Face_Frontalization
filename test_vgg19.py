@@ -15,7 +15,7 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
-time = 77
+time = 67
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
@@ -207,7 +207,7 @@ class DCGAN():
 
         print('Training')
 
-        for k in range(epochs):
+        for k in range(1, epochs + 1):
             for l in tqdm(range(batch_size)):
                 # Select a random half of images
                 index = np.random.randint(0, self.X_train.shape[0], batch_size)
@@ -234,9 +234,9 @@ class DCGAN():
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
@@ -244,8 +244,8 @@ class DCGAN():
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(image_index = l, front_image = front_image, side_image = side_image, save_path = save_path)
 
-            if k % 100 == 0:
-                self.generator.save(save_path + 'gen_model%d.h5' % k)
+            if k % 1 == 100:
+                self.generator.save(save_path + 'gan_epoch%d.h5' % k)
 
         self.history = np.array(self.history)
 
