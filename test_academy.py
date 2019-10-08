@@ -15,11 +15,11 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
-time = 62
+time = 65
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
+X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
+Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -164,15 +164,12 @@ class DCGAN():
     def build_generator(self):
         input = Input(shape = (self.height, self.width, self.channels))
 
-        layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(input)
+        layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (2, 2), padding = 'valid')(input)
         layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer) #
-        layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer) #
+        layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (2, 2), padding = 'valid')(layer)
         layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer) #
-        layer = MaxPooling2D(pool_size = (2, 2))(layer) #
-        layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer) #
+        layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (2, 2), padding = 'valid')(layer)
         layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer) #
-        layer = MaxPooling2D(pool_size = (2, 2))(layer) #
 
         previous_output = layer
 
