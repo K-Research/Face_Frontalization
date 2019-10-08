@@ -157,9 +157,6 @@ class DCGAN():
         decoding_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(decoding_layer)
         decoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(decoding_layer)
 
-        for h in range(6):
-            layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = 3, strides = 1)
-
         # Using 16 Residual Blocks
         for i in range(16):
             layer = self.residual_block(model = layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
