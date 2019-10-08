@@ -18,8 +18,8 @@ from tqdm import tqdm
 time = 1
 
 # Load data
-X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_x.npy') # Side face
-Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/data_y.npy') # Front face
+X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
+Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -29,70 +29,49 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 # print(X_test.shape)
 # print(Y_test.shape)
 
-# Rescale -1 to 1
-X_train = X_train / 127.5 - 1.
-Y_train = Y_train / 127.5 - 1.
-# X_test = X_test / 127.5 - 1.
-# Y_test = Y_test / 127.5 - 1.
-
 # Shuffle
 # X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
 # X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
-
-# Prameters
-height = X_train.shape[1]
-width = X_train.shape[2]
-channels = X_train.shape[3]
-latent_dimension = width
 
 # print(height)
 # print(width)
 # print(channels)
 # print(latent_dimension)
 
-optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
-
-n_show_image = 1 # Number of images to show
-
-history = []
-number = 0
-
-def batch_size():
-    if latent_dimension > 32:
-        batch_size = 32
-
-        return batch_size
-
-    else:
-        batch_size = latent_dimension
-
-        return batch_size
-
 train_epochs = 50000
 test_epochs = 1
-train_batch_size = batch_size()
-test_batch_size = batch_size()
+train_batch_size = 32
+test_batch_size = 32
 train_save_interval = 1
 test_save_interval = 1
 
 class DCGAN():
     def __init__(self):
-        self.height = height
-        self.width = width
-        self.channels = channels
-        self.latent_dimension = latent_dimension
+        # Rescale -1 to 1
+        X_train = X_train / 127.5 - 1.
+        Y_train = Y_train / 127.5 - 1.
+        # X_test = X_test / 127.5 - 1.
+        # Y_test = Y_test / 127.5 - 1.
 
-        self.optimizer = optimizer
+        # Prameters
+        self.height = X_train.shape[1]
+        self.width = X_train.shape[2]
+        self.channels = X_train.shape[3]
+        self.latent_dimension = self.width
 
-        self.number = number
+        self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
+
+        self.n_show_image = 1 # Number of images to show
+        self.history = []
+        self.number = 0
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = optimizer, metrics = ['accuracy'])
+        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
 
         # Build and compile the generator
         self.generator = self.build_generator()
-        self.generator.compile(loss = self.vgg19_loss, optimizer = optimizer)
+        self.generator.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
 
         # The generator takes noise as input and generates imgs
         z = Input(shape = (self.height, self.width, self.channels))
@@ -117,9 +96,6 @@ class DCGAN():
         layer = LeakyReLU(alpha = 0.2)(layer)
 
         return layer
-
-    def paramertic_relu(self, alpha_initializer, alpha_regularizer, alpha_constraint, shared_axes):
-        PReLU(alpha_initializer = alpha_initializer, alpha_regularizer = alpha_regularizer, alpha_constraint = alpha_constraint, shared_axes = shared_axes)
 
     def residual_block(self, model, filters, kernel_size, strides):
         generator = model
@@ -238,11 +214,11 @@ class DCGAN():
         for k in range(epochs):
             for l in tqdm(range(batch_size)):
                 # Select a random half of images
-                index = np.random.randint(0, X_train.shape[0], batch_size)
-                front_image = Y_train[index]
+                index = np.random.randint(0, self.X_train.shape[0], batch_size)
+                front_image = self.Y_train[index]
 
                 # Generate a batch of new images
-                side_image = X_train[index]
+                side_image = self.X_train[index]
 
                 # optimizer.zero_grad()
                 
@@ -272,12 +248,11 @@ class DCGAN():
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(image_index = l, front_image = front_image, side_image = side_image, save_path = save_path)
 
-        history = np.array(history)
+        self.history = np.array(self.history)
 
-        self.history(history = history, save_path = save_path)
+        self.graph(history = self.history, save_path = save_path)
 
     def test(self, epochs, batch_size, save_interval):
-        global history
 
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
@@ -316,13 +291,11 @@ class DCGAN():
                     save_path = 'D:/Generated Image/Testing' + str(time) + '/'
                     self.save_image(image_index = n, front_image = front_image, side_image = side_image, save_path = save_path)
 
-        history = np.array(history)
+        self.history = np.array(self.history)
 
-        self.history(history = history, save_path = save_path)
+        self.graph(history = self.history, save_path = save_path)
 
     def save_image(self, image_index, front_image, side_image, save_path):
-        global number
-
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
 
@@ -336,7 +309,7 @@ class DCGAN():
 
         # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
         for m in range(n_show_image):
-            generated_image_plot = plt.subplot(1, 3, m + 1 + (2 * n_show_image))
+            generated_image_plot = plt.subplot(1, 3, m + 1 + (2 * self.n_show_image))
             generated_image_plot.set_title('Generated image (front image)')
 
             if channels == 1:
@@ -345,11 +318,11 @@ class DCGAN():
             else:
                 plt.imshow(generated_image[image_index,  :  ,  :  ,  : ])
 
-            original_front_face_image_plot = plt.subplot(1, 3, m + 1 + n_show_image)
+            original_front_face_image_plot = plt.subplot(1, 3, m + 1 + self.n_show_image)
             original_front_face_image_plot.set_title('Origninal front image')
 
             if channels == 1:
-                plt.imshow(front_image[image_index].reshape(height, width), cmap = 'gray')
+                plt.imshow(front_image[image_index].reshape(self.height, self.width), cmap = 'gray')
                 
             else:
                 plt.imshow(front_image[image_index])
@@ -358,7 +331,7 @@ class DCGAN():
             original_side_face_image_plot.set_title('Origninal side image')
 
             if channels == 1:
-                plt.imshow(side_image[image_index].reshape(height, width), cmap = 'gray')
+                plt.imshow(side_image[image_index].reshape(self.height, self.width), cmap = 'gray')
                 
             else:
                 plt.imshow(side_image[image_index])
@@ -368,7 +341,7 @@ class DCGAN():
             original_front_face_image_plot.axis('off')
             original_side_face_image_plot.axis('off')
 
-            number += 1
+            self.number += 1
 
             # plt.show()
 
@@ -378,16 +351,16 @@ class DCGAN():
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
 
-        save_name = '%d.png' % number
+        save_name = '%d.png' % self.number
         save_name = os.path.join(save_path, save_name)
     
         plt.savefig(save_name)
         plt.close()
 
-    def history(self, history, save_path):
-        plt.plot(history[:, 2])     
-        plt.plot(history[:, 3])
-        plt.plot(history[:, 4])
+    def graph(self, history, save_path):
+        plt.plot(self.history[:, 2])     
+        plt.plot(self.history[:, 3])
+        plt.plot(self.history[:, 4])
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.title('Generative adversarial network')
