@@ -48,8 +48,8 @@ test_save_interval = 1
 class DCGAN():
     def __init__(self):
         # Rescale -1 to 1
-        X_train = X_train / 127.5 - 1.
-        Y_train = Y_train / 127.5 - 1.
+        self.X_train = X_train / 127.5 - 1.
+        self.Y_train = Y_train / 127.5 - 1.
         # X_test = X_test / 127.5 - 1.
         # Y_test = Y_test / 127.5 - 1.
 
@@ -86,7 +86,7 @@ class DCGAN():
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
         self.combined = Model(z, [image, valid])
-        self.combined.compile(loss = [self.vgg19_loss, 'binary_crossentropy'], loss_weights=[1., 1e-3], optimizer = optimizer)
+        self.combined.compile(loss = [self.vgg19_loss, 'binary_crossentropy'], loss_weights=[1., 1e-3], optimizer = self.optimizer)
 
         # self.combined.summary()
 
@@ -124,7 +124,7 @@ class DCGAN():
     
     # computes VGG loss or content loss
     def vgg19_loss(self, true, prediction):
-        vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (height, width, channels))
+        vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (self.height, self.width, self.channels))
         # Make trainable as False
 
         vgg19.trainable = False
@@ -203,7 +203,6 @@ class DCGAN():
         return Model(image, validity)
 
     def train(self, epochs, batch_size, save_interval):
-        global history
 
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
@@ -241,7 +240,7 @@ class DCGAN():
                         % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
                 record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
-                history.append(record)
+                self.history.append(record)
 
                 # If at save interval -> save generated image samples
                 if l % save_interval == 0:
@@ -308,11 +307,11 @@ class DCGAN():
         plt.subplots_adjust(wspace = 0.6)
 
         # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
-        for m in range(n_show_image):
+        for m in range(self.n_show_image):
             generated_image_plot = plt.subplot(1, 3, m + 1 + (2 * self.n_show_image))
             generated_image_plot.set_title('Generated image (front image)')
 
-            if channels == 1:
+            if self.channels == 1:
                 plt.imshow(generated_image[image_index,  :  ,  :  , 0], cmap = 'gray')
             
             else:
@@ -321,7 +320,7 @@ class DCGAN():
             original_front_face_image_plot = plt.subplot(1, 3, m + 1 + self.n_show_image)
             original_front_face_image_plot.set_title('Origninal front image')
 
-            if channels == 1:
+            if self.channels == 1:
                 plt.imshow(front_image[image_index].reshape(self.height, self.width), cmap = 'gray')
                 
             else:
@@ -330,7 +329,7 @@ class DCGAN():
             original_side_face_image_plot = plt.subplot(1, 3, m + 1)
             original_side_face_image_plot.set_title('Origninal side image')
 
-            if channels == 1:
+            if self.channels == 1:
                 plt.imshow(side_image[image_index].reshape(self.height, self.width), cmap = 'gray')
                 
             else:
