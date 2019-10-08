@@ -142,7 +142,7 @@ class DCGAN():
         layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
         layer = MaxPooling2D(pool_size = (2, 2))(layer)
 
-        encoding_layer = Conv2D(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(layer)
+        encoding_layer = Conv2D(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(layer)
         encoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(encoding_layer)
         encoding_layer = Conv2D(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(encoding_layer)
         encoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(encoding_layer)
@@ -152,9 +152,9 @@ class DCGAN():
 
         decoding_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(layer)
         decoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(decoding_layer)
-        decoding_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(decoding_layer)
+        decoding_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(decoding_layer)
         decoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(decoding_layer)
-        decoding_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(decoding_layer)
+        decoding_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(decoding_layer)
         decoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(decoding_layer)
 
         # Using 16 Residual Blocks
