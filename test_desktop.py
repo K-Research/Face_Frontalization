@@ -30,7 +30,7 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 # X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
 # X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
-train_epochs = 10000
+train_epochs = 100000
 test_epochs = 1
 train_batch_size = 32
 test_batch_size = 32
