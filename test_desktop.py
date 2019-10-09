@@ -26,7 +26,7 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 # print(X_test.shape)
 # print(Y_test.shape)
 
-train_epochs = 10000
+train_epochs = 100000
 batch_size = 32
 save_interval = 1
 
