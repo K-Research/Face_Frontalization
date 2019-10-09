@@ -55,7 +55,7 @@ class DCGAN():
         self.channels = X_train.shape[3]
         self.latent_dimension = self.width
 
-        self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
+        self.optimizer = Adam(lr = 1e-6, beta_1 = 0.5)
 
         self.batch = int(self.X_train.shape[0] / batch_size)
 
