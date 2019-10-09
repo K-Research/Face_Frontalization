@@ -15,6 +15,8 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
+np.random.seed(10)
+
 time = 1
 
 # Load data
