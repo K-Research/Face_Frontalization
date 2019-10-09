@@ -190,6 +190,10 @@ class DCGAN():
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
+        model.add(Conv2D(512, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
         model.add(Flatten())
         model.add(Dense(1, activation = 'sigmoid'))
 
@@ -209,7 +213,7 @@ class DCGAN():
         print('Training')
 
         for k in range(1, epochs + 1):
-            for l in tqdm(range(self.batch)):
+            for l in tqdm(range(1, self.batch + 1)):
                 # Select a random half of images
                 index = np.random.randint(0, self.X_train.shape[0], batch_size)
                 front_image = self.Y_train[index]
