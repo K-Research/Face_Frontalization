@@ -2,18 +2,24 @@ from __future__ import print_function, division
 
 from keras.applications.vgg19 import VGG19
 import keras.backend as K
-from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
+from keras.engine.topology import Network
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, InputSpec, Layer, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam, Nadam
+from keras_contrib.layers.normalization.instancenormalization import InstanceNormalization
 import math
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import random
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 import sys
+import tensorflow as tf
 from tqdm import tqdm
+
+np.random.seed(seed = 12345)
 
 time = 1
 
@@ -30,10 +36,10 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 # X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
 # X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
 
-train_epochs = 100000
+train_epochs = 10000
 test_epochs = 1
-train_batch_size = 32
-test_batch_size = 32
+train_batch_size = 16
+test_batch_size = 1
 train_save_interval = 1
 test_save_interval = 1
 
@@ -51,207 +57,173 @@ class DCGAN():
         self.channels = self.X_train.shape[3]
         self.latent_dimension = self.width
 
-        self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
+        self.discriminator_optimizer = Adam(lr = 2e-4, beta_1 = 0.5, beta_2 = 0.999)
+        self.generator_optimizer = Adam(lr = 2e-4, beta_1 = 0.5, beta_2 = 0.999)
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
         self.number = 0
 
         # Build and compile the discriminator
-        self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
+        discriminator_A = self.build_discriminator()
+        discriminator_B = self.build_discriminator()
+
+        image_A = Input(shape = (self.height, self.width, self.channels))
+        image_B = Input(shape = (self.height, self.width, self.channels))
+
+        guess_A = discriminator_A(image_A)
+        guess_B = discriminator_B(image_B)
+
+        self.discriminator_A = Model(inputs = image_A, outputs = guess_A)
+        self.discriminator_B = Model(inputs = image_B, outputs = guess_B)
+
+        self.discriminator_A.compile(optimizer = self.discriminator_optimizer, loss = self.least_squares_error, loss_weights = [0.5])
+        self.discriminator_B.compile(optimizer = self.discriminator_optimizer, loss = self.least_squares_error, loss_weights = [0.5])
+
+        # Use Networks to avoid falsy keras error about weight descripancies
+        self.discriminator_A_static = Network(inputs = image_A, outputs = guess_A)
+        self.discriminator_B_static = Network(inputs = image_B, outputs = guess_B)
+
+        # Do note update discriminator weights during generator training
+        self.discriminator_A_static.trainable = False
+        self.discriminator_B_static.trainable = False
 
         # Build and compile the generator
-        self.generator = self.build_generator()
-        self.generator.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
+        self.generator_A_to_B = self.build_generator()
+        self.generator_B_to_A = self.build_generator()
 
-        # The generator takes noise as input and generates imgs
-        z = Input(shape = (self.height, self.width, self.channels))
-        image = self.generator(z)
+        # If use identity learning
+        # self.generator_A_to_B.compile(optimizer = self.generator_optimizer, loss = 'mae')
+        # self.generator_B_to_A.compile(optimizer = self.generator_optimzier, loss = 'mae')
 
-        # For the combined model we will only train the generator
-        self.discriminator.trainable = False
+        # Generator builds
+        real_A = Input(shape = (self.height, self.width, self.channels))
+        real_B = Input(shape = (self.height, self.width, self.channels))
 
-        # The discriminator takes generated images as input and determines validity
-        valid = self.discriminator(image)
+        synthetic_A = self.generator_B_to_A(real_B)
+        synthetic_B = self.generator_A_to_B(real_A)
 
-        # The combined model  (stacked generator and discriminator)
-        # Trains the generator to fool the discriminator
-        self.combined = Model(z, [image, valid])
-        self.combined.compile(loss = [self.vgg19_loss, 'binary_crossentropy'], loss_weights=[1., 1e-3], optimizer = self.optimizer)
+        discriminator_A_guess_synthetic = self.discriminator_A_static(synthetic_A)
+        discriminator_B_guess_synthetic = self.discriminator_B_static(synthetic_B)
 
-        # self.combined.summary()
+        reconstructed_A = self.generator_B_to_A(synthetic_B)
+        reconstructed_B = self.generator_A_to_B(synthetic_A)
 
-    def discriminator_block(self, model, filters, kernel_size, strides):
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
-        layer = BatchNormalization(momentum = 0.5)(layer)
-        layer = LeakyReLU(alpha = 0.2)(layer)
+        model_output = [reconstructed_A, reconstructed_B]
+        compile_loss = [self.cycle_loss, self.cycle_loss, self.least_squares_error, self.least_squares_error]
+        compile_weights = [10.0, 10.0, 1.0, 1.0]
 
-        return layer
+        model_output.append(discriminator_A_guess_synthetic)
+        model_output.append(discriminator_B_guess_synthetic)
 
-    def residual_block(self, model, filters, kernel_size, strides):
-        generator = model
+        self.generator = Model(inputs = [real_A, real_B], outputs = model_output)
+        self.generator.compile(optimizer = self.generator_optimizer, loss = compile_loss, loss_weights = compile_weights)
 
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(generator)
-        layer = BatchNormalization(momentum = 0.5)(layer)
+    def cycle_loss(self, y_true, y_pred):
+        loss = tf.reduce_mean(tf.abs(y_pred - y_true))
 
-        # Using Parametric ReLU
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'same')(layer)
-        output = BatchNormalization(momentum = 0.5)(layer)
+        return loss
 
-        model = add([generator, output])
-
-        return model
-
-    def up_sampling_block(self, model, filters, kernel_size, strides):
-        # In place of Conv2D and UpSampling2D we can also use Conv2DTranspose (Both are used for Deconvolution)
-        # Even we can have our own function for deconvolution (i.e one made in Utils.py)
-        # layer = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = 'same)(layer)
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = LeakyReLU(alpha = 0.2)(layer)
-
-        return layer
-    
-    # computes VGG loss or content loss
-    def vgg19_loss(self, true, prediction):
-        vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (self.height, self.width, self.channels))
-        # Make trainable as False
-
-        vgg19.trainable = False
-
-        for layer in vgg19.layers:
-            layer.trainable = False
+    def least_squares_error(self, y_true, y_pred):
+        loss = tf.reduce_mean(tf.squared_difference(y_pred, y_true))
         
-        model = Model(inputs = vgg19.input, outputs = vgg19.get_layer('block5_conv4').output)
-        model.trainable = False
+        return loss
 
-        return K.mean(K.square(model(true) - model(prediction)))
+    def residual_block(self, previous_layer):
+        filters = int(previous_layer.shape[-1])
+
+        # First layer
+        layer = ReflectionPadding2D((1, 1))(previous_layer)
+        layer = Conv2D(filters = filters, kernel_size = (3, 3), strides = (1, 1), padding = 'valid')(layer)
+        layer = InstanceNormalization(axis = 3, epsilon = 1e-5, center = True)(layer, training = True)
+        # layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = Activation('relu')(layer)
+
+        # Second layer
+        layer = ReflectionPadding2D((1, 1))(layer)
+        layer = Conv2D(filters = filters, kernel_size = (3, 3), strides = (1, 1), padding = 'valid')(layer)
+        layer = InstanceNormalization(axis = 3, epsilon = 1e-5, center = True)(layer, training = True)
+        # layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = Activation('relu')(layer) 
+
+        # Merge
+        layer = add([layer, previous_layer])
+
+        return layer
 
     def build_generator(self):
+        # Specify input
         input = Input(shape = (self.height, self.width, self.channels))
 
-        layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(input)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-        layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-        layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-        layer = Conv2D(filters = 128, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-        layer = Conv2D(filters = 256, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-        layer = Conv2D(filters = 512, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-        layer = Conv2D(filters = 1024, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
+        layer = ReflectionPadding2D((3, 3))(input)
+        layer = Conv2D(filters = 32, kernel_size = (7, 7), strides = (1, 1), padding = 'valid')(layer)
+        layer = InstanceNormalization(axis = 3, epsilon = 1e-5, center = True)(layer, training = True)
+        # layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = Activation('relu')(layer)
+        layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(layer)
+        layer = InstanceNormalization(axis = 3, epsilon = 1e-5, center = True)(layer, training = True)
+        # layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = Activation('relu')(layer)
+        layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(layer)
+        layer = InstanceNormalization(axis = 3, epsilon = 1e-5, center = True)(layer, training = True)
+        # layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = Activation('relu')(layer)
 
-        previous_layer = layer
+        # Residual layer
+        for _ in range(9):
+            layer = self.residual_block(layer)
 
-        '''
-        # Encoding
-        encoding_layer = Conv2D(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(layer)
-        encoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(encoding_layer)
-        encoding_layer = Conv2D(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(encoding_layer)
-        encoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(encoding_layer)
-        encoding_layer = Conv2D(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(encoding_layer)
-        encoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(encoding_layer)
-        encoding_layer = MaxPooling2D(pool_size = (2, 2))(encoding_layer)
-
-        # Decoding
-        decoding_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(encoding_layer)
-        decoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(decoding_layer)
-        decoding_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(decoding_layer)
-        decoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(decoding_layer)
-        decoding_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(decoding_layer)
-        decoding_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(decoding_layer)
-        '''
-
-        # Using 16 Residual Blocks
-        for i in range(16):
-            layer = self.residual_block(model = layer, filters = 1024, kernel_size = (2, 3), strides = (1, 1))
-
-        layer = Conv2D(filters = 1024, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = BatchNormalization(momentum = 0.5)(layer)
-        layer = add([previous_layer, layer])
-
-        '''
-        # Using 2 UpSampling Blocks
-        for j in range():
-            layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = 2, strides = 1)
-        '''
-        layer = Conv2D(filters = 512, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = Conv2D(filters = 256, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = Conv2D(filters = 128, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = Conv2D(filters = 8, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = Conv2D(filters = self.channels, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
+        layer = Conv2DTranspose(filters = 64, kernel_size = 3, strides = 2, padding = 'same')(layer)
+        layer = InstanceNormalization(axis = 3, epsilon = 1e-5, center = True)(layer, training = True)
+        # layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = Activation('relu')(layer)
+        layer = Conv2DTranspose(filters = 32, kernel_size = 3, strides = 2, padding = 'same')(layer)
+        layer = InstanceNormalization(axis = 3, epsilon = 1e-5, center = True)(layer, training = True)
+        # layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
+        layer = Activation('relu')(layer)
+        layer = ReflectionPadding2D((3, 3))(layer)
+        layer = Conv2D(filters = self.channels, kernel_size = (7, 7), strides = (1, 1))(layer)
 
         output = Activation('tanh')(layer)
 
-        generator_model = Model(inputs = input, outputs = output)
-
-        # generator_model.summary()
-
-        return generator_model
-
-    def build_discriminator(self):
-        model = Sequential()
-
-        model.add(Conv2D(32, kernel_size = (3, 3), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Flatten())
-        model.add(Dense(1, activation = 'sigmoid'))
+        model = Model(inputs = input, outputs = output)
 
         # model.summary()
 
-        image = Input(shape = (self.height, self.width, self.channels))
-        validity = model(image)
+        return model
 
-        return Model(image, validity)
+    def build_discriminator(self):
+        # Specify input
+        input = Input(shape = (self.height, self.width, self.channels))
+
+        layer = Conv2D(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(input)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+        layer = Conv2D(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(layer)
+        layer = InstanceNormalization(axis = 3, epsilon = 1e-5, center = True)(layer, training = True)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+        layer = Conv2D(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(layer)
+        layer = InstanceNormalization(axis = 3, epsilon = 1e-5, center = True)(layer, training = True)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+        layer = Conv2D(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(layer)
+        layer = InstanceNormalization(axis = 3, epsilon = 1e-5, center = True)(layer, training = True)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+        layer = Flatten()(layer)
+        
+        output = Dense(units = 1, activation = 'sigmoid')(layer)
+
+        model = Model(inputs = input, outputs = output)
+
+        # model.summary()
+
+        return model
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
         real = np.ones((batch_size, 1))
+
+        synthetic_pool_A = ImagePool(50)
+        synthetic_pool_B = ImagePool(50)
 
         print('Training')
 
@@ -264,27 +236,43 @@ class DCGAN():
                 # Generate a batch of new images
                 side_image = self.X_train[index]
 
-                # optimizer.zero_grad()
-                
-                generated_image = self.generator.predict(side_image)
+                # target_data = [side_image, front_image]
+                target_data = [front_image, side_image]
 
-                self.discriminator.trainable = True
+
+                synthetic_images_A = self.generator_B_to_A.predict(front_image)
+                synthetic_images_B = self.generator_A_to_B.predict(side_image)
+                synthetic_images_A = synthetic_pool_A.query(synthetic_images_A)
+                synthetic_images_B = synthetic_pool_B.query(synthetic_images_B)
 
                 # Train the discriminator (real classified as ones and generated as zeros)
-                discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
-                discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
-                discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
-                
-                self.discriminator.trainable = False
+                discriminator_A_loss_real = self.discriminator_A.train_on_batch(x = side_image, y = real)
+                discriminator_B_loss_real = self.discriminator_B.train_on_batch(x = front_image, y = real)
+
+                discriminator_A_loss_synthetic = self.discriminator_A.train_on_batch(x = synthetic_images_A, y = fake)
+                discriminator_B_loss_synthetic = self.discriminator_B.train_on_batch(x = synthetic_images_B, y = fake)
+
+                discriminator_A_loss = discriminator_A_loss_real + discriminator_A_loss_synthetic
+                discriminator_B_loss = discriminator_B_loss_real + discriminator_B_loss_synthetic
+
+                target_data.append(real)
+                target_data.append(real)
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
+                generator_loss = self.generator.train_on_batch(x = [side_image, front_image], y = target_data)
+
+                generator_A_discriminator_loss_synthetic = generator_loss[1]
+                generator_B_discriminator_loss_synthetic = generator_loss[2]
+
+                reconstruction_A_loss = generator_loss[3]
+                reconstruction_B_loss = generator_loss[4]
+
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (k + 1, l + 1, discriminator_B_loss * 100, discriminator_B_loss, generator_B_discriminator_loss_synthetic))
 
-                record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k + 1, l + 1, discriminator_B_loss * 100, discriminator_B_loss, generator_B_discriminator_loss_synthetic)
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
@@ -342,7 +330,8 @@ class DCGAN():
 
     def save_image(self, image_index, front_image, side_image, save_path):
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+        generated_image_A_to_B = 0.5 * self.generator_A_to_B.predict(side_image) + 0.5
+        generated_image_B_to_A = 0.5 * self.generator_B_to_A.predict(front_image) + 0.5
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
@@ -354,16 +343,25 @@ class DCGAN():
 
         # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
         for m in range(self.n_show_image):
-            generated_image_plot = plt.subplot(1, 3, m + 1 + (2 * self.n_show_image))
-            generated_image_plot.set_title('Generated image (front image)')
+            generated_image_A_to_B_plot = plt.subplot(1, 4, m + 1 + (2 * self.n_show_image))
+            generated_image_A_to_B_plot.set_title('Generated image (front image)')
 
             if self.channels == 1:
-                plt.imshow(generated_image[image_index,  :  ,  :  , 0], cmap = 'gray')
+                plt.imshow(generated_image_A_to_B[image_index,  :  ,  :  , 0], cmap = 'gray')
             
             else:
-                plt.imshow(generated_image[image_index,  :  ,  :  ,  : ])
+                plt.imshow(generated_image_A_to_B[image_index,  :  ,  :  ,  : ])
 
-            original_front_face_image_plot = plt.subplot(1, 3, m + 1 + self.n_show_image)
+            generated_image_B_to_A_plot = plt.subplot(1, 4, m + 1 + (3 * self.n_show_image))
+            generated_image_B_to_A_plot.set_title('Generated image (front image)')
+
+            if self.channels == 1:
+                plt.imshow(generated_image_B_to_A[image_index,  :  ,  :  , 0], cmap = 'gray')
+            
+            else:
+                plt.imshow(generated_image_B_to_A[image_index,  :  ,  :  ,  : ])
+
+            original_front_face_image_plot = plt.subplot(1, 4, m + 1 + self.n_show_image)
             original_front_face_image_plot.set_title('Origninal front image')
 
             if self.channels == 1:
@@ -372,7 +370,7 @@ class DCGAN():
             else:
                 plt.imshow(front_image[image_index])
 
-            original_side_face_image_plot = plt.subplot(1, 3, m + 1)
+            original_side_face_image_plot = plt.subplot(1, 4, m + 1)
             original_side_face_image_plot.set_title('Origninal side image')
 
             if self.channels == 1:
@@ -382,7 +380,8 @@ class DCGAN():
                 plt.imshow(side_image[image_index])
 
             # Don't show axis of x and y
-            generated_image_plot.axis('off')
+            generated_image_A_to_B_plot.axis('off')
+            generated_image_B_to_A_plot.axis('off')
             original_front_face_image_plot.axis('off')
             original_side_face_image_plot.axis('off')
 
@@ -427,6 +426,68 @@ class DCGAN():
 
         figure.savefig(save_name)
         plt.close()
+
+# reflection padding taken from
+# https://github.com/fastai/courses/blob/master/deeplearning2/neural-style.ipynb
+class ReflectionPadding2D(Layer):
+    def __init__(self, padding=(1, 1), **kwargs):
+        self.padding = tuple(padding)
+        self.input_spec = [InputSpec(ndim=4)]
+        super(ReflectionPadding2D, self).__init__(**kwargs)
+
+    def compute_output_shape(self, s):
+        return (s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3])
+
+    def call(self, x, mask=None):
+        w_pad, h_pad = self.padding
+        return tf.pad(x, [[0, 0], [h_pad, h_pad], [w_pad, w_pad], [0, 0]], 'REFLECT')
+
+
+class ImagePool():
+    def __init__(self, pool_size):
+        self.pool_size = pool_size
+        if self.pool_size > 0:
+            self.num_imgs = 0
+            self.images = []
+
+    def query(self, images):
+        if self.pool_size == 0:
+            return images
+        return_images = []
+        for image in images:
+            if len(image.shape) == 3:
+                image = image[np.newaxis, :, :, :]
+
+            if self.num_imgs < self.pool_size:  # fill up the image pool
+                self.num_imgs = self.num_imgs + 1
+                if len(self.images) == 0:
+                    self.images = image
+                else:
+                    self.images = np.vstack((self.images, image))
+
+                if len(return_images) == 0:
+                    return_images = image
+                else:
+                    return_images = np.vstack((return_images, image))
+
+            else:  # 50% chance that we replace an old synthetic image
+                p = random.uniform(0, 1)
+                if p > 0.5:
+                    random_id = random.randint(0, self.pool_size - 1)
+                    tmp = self.images[random_id, :, :, :]
+                    tmp = tmp[np.newaxis, :, :, :]
+                    self.images[random_id, :, :, :] = image[0, :, :, :]
+                    if len(return_images) == 0:
+                        return_images = tmp
+                    else:
+                        return_images = np.vstack((return_images, tmp))
+                else:
+                    if len(return_images) == 0:
+                        return_images = image
+                    else:
+                        return_images = np.vstack((return_images, image))
+
+        return return_images
 
 if __name__ == '__main__':
     dcgan = DCGAN()
