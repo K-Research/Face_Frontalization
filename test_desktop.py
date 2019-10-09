@@ -241,7 +241,7 @@ class DCGAN():
                 # If at save interval -> save generated image samples
                 if l % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
-                    self.save_image(image_index = l, front_image = front_image, side_image = side_image, save_path = save_path)
+                    self.save_image(front_image = front_image, side_image = side_image, save_path = save_path)
 
             if k % 100 == 0:
                 self.generator.save(save_path + 'generator_epoch_%d.h5' % k)
@@ -250,67 +250,68 @@ class DCGAN():
 
         self.graph(history = self.history, save_path = save_path)
 
-    def save_image(self, image_index, front_image, side_image, save_path):
+    def save_image(self, front_image, side_image, save_path):
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
 
-        plt.figure(figsize = (8, 2))
-
-        # Adjust the interval of the image
-        plt.subplots_adjust(wspace = 0.6)
-
         # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
-        for m in range(self.n_show_image):
-            generated_image_plot = plt.subplot(1, 3, m + 1 + (2 * self.n_show_image))
-            generated_image_plot.set_title('Generated image (front image)')
+        for m in range(batch_size):
+            plt.figure(figsize = (8, 2))
 
-            if self.channels == 1:
-                plt.imshow(generated_image[image_index,  :  ,  :  , 0], cmap = 'gray')
-            
-            else:
-                plt.imshow(generated_image[image_index,  :  ,  :  ,  : ])
+            # Adjust the interval of the image
+            plt.subplots_adjust(wspace = 0.6)
 
-            original_front_face_image_plot = plt.subplot(1, 3, m + 1 + self.n_show_image)
-            original_front_face_image_plot.set_title('Origninal front image')
+            for n in range(self.n_show_image):
+                generated_image_plot = plt.subplot(1, 3, n + 1 + (2 * self.n_show_image))
+                generated_image_plot.set_title('Generated image (front image)')
 
-            if self.channels == 1:
-                plt.imshow(front_image[image_index].reshape(self.height, self.width), cmap = 'gray')
+                if self.channels == 1:
+                    plt.imshow(generated_image[m,  :  ,  :  , 0], cmap = 'gray')
                 
-            else:
-                plt.imshow(front_image[image_index])
+                else:
+                    plt.imshow(generated_image[m,  :  ,  :  ,  : ])
 
-            original_side_face_image_plot = plt.subplot(1, 3, m + 1)
-            original_side_face_image_plot.set_title('Origninal side image')
+                original_front_face_image_plot = plt.subplot(1, 3, n + 1 + self.n_show_image)
+                original_front_face_image_plot.set_title('Origninal front image')
 
-            if self.channels == 1:
-                plt.imshow(side_image[image_index].reshape(self.height, self.width), cmap = 'gray')
-                
-            else:
-                plt.imshow(side_image[image_index])
+                if self.channels == 1:
+                    plt.imshow(front_image[m].reshape(self.height, self.width), cmap = 'gray')
+                    
+                else:
+                    plt.imshow(front_image[m])
 
-            # Don't show axis of x and y
-            generated_image_plot.axis('off')
-            original_front_face_image_plot.axis('off')
-            original_side_face_image_plot.axis('off')
+                original_side_face_image_plot = plt.subplot(1, 3, n + 1)
+                original_side_face_image_plot.set_title('Origninal side image')
 
-            self.number += 1
+                if self.channels == 1:
+                    plt.imshow(side_image[m].reshape(self.height, self.width), cmap = 'gray')
+                    
+                else:
+                    plt.imshow(side_image[m])
 
-            # plt.show()
+                # Don't show axis of x and y
+                generated_image_plot.axis('off')
+                original_front_face_image_plot.axis('off')
+                original_side_face_image_plot.axis('off')
 
-        save_path = save_path
+                self.number += 1
 
-        # Check folder presence
-        if not os.path.isdir(save_path):
-            os.makedirs(save_path)
+                # plt.show()
 
-        save_name = '%d.png' % self.number
-        save_name = os.path.join(save_path, save_name)
-    
-        plt.savefig(save_name)
-        plt.close()
+            save_path = save_path
+
+            # Check folder presence
+            if not os.path.isdir(save_path):
+                os.makedirs(save_path)
+
+            save_name = '%d.png' % self.number
+            save_name = os.path.join(save_path, save_name)
+        
+            plt.savefig(save_name)
+            plt.close()
 
     def graph(self, history, save_path):
         plt.plot(self.history[:, 2])     
