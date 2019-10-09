@@ -35,7 +35,7 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 # print(channels)
 # print(latent_dimension)
 
-train_epochs = 50000
+train_epochs = 10000
 batch_size = 32
 save_interval = 1
 
