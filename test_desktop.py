@@ -2,16 +2,14 @@ from __future__ import print_function, division
 
 from keras.applications.vgg19 import VGG19
 import keras.backend as K
-from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Dense, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
-from keras.optimizers import Adam, Nadam
+from keras.optimizers import Adam
 import math
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
@@ -27,15 +25,6 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 # print(Y_train.shape)
 # print(X_test.shape)
 # print(Y_test.shape)
-
-# Shuffle
-# X_train, Y_train = shuffle(X_train, Y_train, random_state = 66)
-# X_test, Y_test = shuffle(X_test, Y_test, random_state = 66)
-
-# print(height)
-# print(width)
-# print(channels)
-# print(latent_dimension)
 
 train_epochs = 10000
 batch_size = 32
@@ -165,44 +154,53 @@ class DCGAN():
         layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(layer)
         output = Activation('tanh')(layer)
 
-        generator_model = Model(inputs = input, outputs = output)
-
-        # generator_model.summary()
-
-        return generator_model
-
-    def build_discriminator(self):
-        model = Sequential()
-
-        model.add(Conv2D(32, kernel_size = (3, 3), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(512, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Flatten())
-        model.add(Dense(1, activation = 'sigmoid'))
+        model = Model(inputs = input, outputs = output)
 
         # model.summary()
 
-        image = Input(shape = (self.height, self.width, self.channels))
-        validity = model(image)
+        return model
 
-        return Model(image, validity)
+    def build_discriminator(self):
+        discriminator = Sequential()
+
+        discriminator.add(Conv2D(61, kernel_size = (3, 3), strides = (1, 1), input_shape = (self.height, self.width, self.channels), padding = 'same'))
+        discriminator.add(LeakyReLU(alpha = 0.2))
+        discriminator.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        discriminator.add(BatchNormalization(momentum = 0.8))
+        discriminator.add(LeakyReLU(alpha = 0.2))
+        discriminator.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        discriminator.add(BatchNormalization(momentum = 0.8))
+        discriminator.add(LeakyReLU(alpha = 0.2))
+        discriminator.add(Conv2D(128, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        discriminator.add(BatchNormalization(momentum = 0.8))
+        discriminator.add(LeakyReLU(alpha = 0.2))
+        discriminator.add(Conv2D(256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        discriminator.add(BatchNormalization(momentum = 0.8))
+        discriminator.add(LeakyReLU(alpha = 0.2))
+        discriminator.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        discriminator.add(BatchNormalization(momentum = 0.8))
+        discriminator.add(LeakyReLU(alpha = 0.2))
+        discriminator.add(Conv2D(512, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        discriminator.add(BatchNormalization(momentum = 0.8))
+        discriminator.add(LeakyReLU(alpha = 0.2))
+        discriminator.add(Conv2D(512, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        discriminator.add(BatchNormalization(momentum = 0.8))
+        discriminator.add(LeakyReLU(alpha = 0.2))
+        discriminator.add(Flatten())
+        discriminator.add(Dense(1024))
+        discriminator.add(LeakyReLU(alpha = 0.2))
+        discriminator.add(Dense(1, activation = 'sigmoid'))
+
+        # discriminator.summary()
+
+        generated_image = Input(shape = (self.height, self.width, self.channels))
+        validity = discriminator(generated_image)
+
+        model = Model(generated_image, validity)
+
+        # model.summary()
+
+        return model
 
     def train(self, epochs, batch_size, save_interval):
 
