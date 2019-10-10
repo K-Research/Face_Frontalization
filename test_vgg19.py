@@ -15,7 +15,7 @@ from sklearn.utils import shuffle
 import sys
 from tqdm import tqdm
 
-time = 67
+time = 68
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
@@ -36,11 +36,8 @@ Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_
 # print(latent_dimension)
 
 train_epochs = 50000
-test_epochs = 1
-train_batch_size = 32
-test_batch_size = 32
-train_save_interval = 1
-test_save_interval = 1
+batch_size = 32
+save_interval = 1
 
 class DCGAN():
     def __init__(self):
@@ -57,6 +54,8 @@ class DCGAN():
         self.latent_dimension = self.width
 
         self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
+
+        self.batch = int(self.X_train.shape[0] / batch_size)
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
@@ -208,7 +207,7 @@ class DCGAN():
         print('Training')
 
         for k in range(1, epochs + 1):
-            for l in tqdm(range(batch_size)):
+            for l in tqdm(range(1, self.batch + 1)):
                 # Select a random half of images
                 index = np.random.randint(0, self.X_train.shape[0], batch_size)
                 front_image = self.Y_train[index]
@@ -242,59 +241,17 @@ class DCGAN():
                 # If at save interval -> save generated image samples
                 if l % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
-                    self.save_image(image_index = l, front_image = front_image, side_image = side_image, save_path = save_path)
+                    self.save_image(front_image = front_image, side_image = side_image, save_path = save_path)
 
             if k % 100 == 0:
-                self.generator.save(save_path + 'generator_epoch_%d.h5' % k)
+                self.generator.to_json(save_path + 'generator_json_epoch_%d.json' % k)
+                self.generator.save(save_path + 'generator_h5_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
         self.graph(history = self.history, save_path = save_path)
 
-    def test(self, epochs, batch_size, save_interval):
-
-        # Adversarial ground truths
-        fake = np.zeros((batch_size, 1))
-        real = np.ones((batch_size, 1))
-
-        print('Testing')
-
-        for m in range(epochs):
-            for n in tqdm(range(batch_size)):
-                # Select a random half of images
-                index = np.random.randint(0, X_test.shape[0], batch_size)
-                front_image = Y_test[index]
-
-                # Generate a batch of new images
-                side_image = X_test[index]
-
-                generated_image = self.generator.predict(side_image)
-
-                # Train the discriminator (real classified as ones and generated as zeros)
-                discriminator_fake_loss = self.discriminator.test_on_batch(generated_image, fake)
-                discriminator_real_loss = self.discriminator.test_on_batch(front_image, real)
-                discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
-
-                # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.test_on_batch(side_image, [front_image, real])
-                
-                # Plot the progress
-                print ('\nTest epoch : %d \nTest batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
-
-                record = (m + 1, n + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
-                history.append(record)
-
-                # If at save interval -> save generated image samples
-                if n % save_interval == 0:
-                    save_path = 'D:/Generated Image/Testing' + str(time) + '/'
-                    self.save_image(image_index = n, front_image = front_image, side_image = side_image, save_path = save_path)
-
-        self.history = np.array(self.history)
-
-        self.graph(history = self.history, save_path = save_path)
-
-    def save_image(self, image_index, front_image, side_image, save_path):
+    def save_image(self, front_image, side_image, save_path):
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
 
@@ -307,54 +264,60 @@ class DCGAN():
         plt.subplots_adjust(wspace = 0.6)
 
         # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
-        for m in range(self.n_show_image):
-            generated_image_plot = plt.subplot(1, 3, m + 1 + (2 * self.n_show_image))
-            generated_image_plot.set_title('Generated image (front image)')
+        for m in range(batch_size):
+            plt.figure(figsize = (8, 2))
 
-            if self.channels == 1:
-                plt.imshow(generated_image[image_index,  :  ,  :  , 0], cmap = 'gray')
-            
-            else:
-                plt.imshow(generated_image[image_index,  :  ,  :  ,  : ])
+            # Adjust the interval of the image
+            plt.subplots_adjust(wspace = 0.6)
 
-            original_front_face_image_plot = plt.subplot(1, 3, m + 1 + self.n_show_image)
-            original_front_face_image_plot.set_title('Origninal front image')
+            for n in range(self.n_show_image):
+                generated_image_plot = plt.subplot(1, 3, n + 1 + (2 * self.n_show_image))
+                generated_image_plot.set_title('Generated image (front image)')
 
-            if self.channels == 1:
-                plt.imshow(front_image[image_index].reshape(self.height, self.width), cmap = 'gray')
+                if self.channels == 1:
+                    plt.imshow(generated_image[m,  :  ,  :  , 0], cmap = 'gray')
                 
-            else:
-                plt.imshow(front_image[image_index])
+                else:
+                    plt.imshow(generated_image[m,  :  ,  :  ,  : ])
 
-            original_side_face_image_plot = plt.subplot(1, 3, m + 1)
-            original_side_face_image_plot.set_title('Origninal side image')
+                original_front_face_image_plot = plt.subplot(1, 3, n + 1 + self.n_show_image)
+                original_front_face_image_plot.set_title('Origninal front image')
 
-            if self.channels == 1:
-                plt.imshow(side_image[image_index].reshape(self.height, self.width), cmap = 'gray')
-                
-            else:
-                plt.imshow(side_image[image_index])
+                if self.channels == 1:
+                    plt.imshow(front_image[m].reshape(self.height, self.width), cmap = 'gray')
+                    
+                else:
+                    plt.imshow(front_image[m])
 
-            # Don't show axis of x and y
-            generated_image_plot.axis('off')
-            original_front_face_image_plot.axis('off')
-            original_side_face_image_plot.axis('off')
+                original_side_face_image_plot = plt.subplot(1, 3, n + 1)
+                original_side_face_image_plot.set_title('Origninal side image')
 
-            self.number += 1
+                if self.channels == 1:
+                    plt.imshow(side_image[m].reshape(self.height, self.width), cmap = 'gray')
+                    
+                else:
+                    plt.imshow(side_image[m])
 
-            # plt.show()
+                # Don't show axis of x and y
+                generated_image_plot.axis('off')
+                original_front_face_image_plot.axis('off')
+                original_side_face_image_plot.axis('off')
 
-        save_path = save_path
+                self.number += 1
 
-        # Check folder presence
-        if not os.path.isdir(save_path):
-            os.makedirs(save_path)
+                # plt.show()
 
-        save_name = '%d.png' % self.number
-        save_name = os.path.join(save_path, save_name)
-    
-        plt.savefig(save_name)
-        plt.close()
+            save_path = save_path
+
+            # Check folder presence
+            if not os.path.isdir(save_path):
+                os.makedirs(save_path)
+
+            save_name = '%d.png' % self.number
+            save_name = os.path.join(save_path, save_name)
+        
+            plt.savefig(save_name)
+            plt.close()
 
     def graph(self, history, save_path):
         plt.plot(self.history[:, 2])     
@@ -384,5 +347,4 @@ class DCGAN():
 
 if __name__ == '__main__':
     dcgan = DCGAN()
-    dcgan.train(epochs = train_epochs, batch_size = train_batch_size, save_interval = train_save_interval)
-    # dcgan.test(epochs = test_epochs, batch_size = test_batch_size, save_interval = test_save_interval)
+    dcgan.train(epochs = train_epochs, batch_size = batch_size, save_interval = save_interval)
