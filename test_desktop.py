@@ -156,7 +156,7 @@ class DCGAN():
     def build_discriminator(self):
         discriminator = Sequential()
 
-        discriminator.add(Conv2D(61, kernel_size = (3, 3), strides = (1, 1), input_shape = (self.height, self.width, self.channels), padding = 'same'))
+        discriminator.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), input_shape = (self.height, self.width, self.channels), padding = 'same'))
         discriminator.add(LeakyReLU(alpha = 0.2))
         discriminator.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
         discriminator.add(BatchNormalization(momentum = 0.8))
