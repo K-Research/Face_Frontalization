@@ -1,7 +1,5 @@
 from __future__ import print_function, division
 
-from keras.applications.vgg19 import VGG19
-import keras.backend as K
 from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
@@ -100,21 +98,6 @@ class DCGAN():
         layer = LeakyReLU(alpha = 0.2)(layer)
 
         return layer
-    
-    # computes VGG loss or content loss
-    def vgg19_loss(self, true, prediction):
-        vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (self.height, self.width, self.channels))
-        # Make trainable as False
-
-        vgg19.trainable = False
-
-        for layer in vgg19.layers:
-            layer.trainable = False
-        
-        model = Model(inputs = vgg19.input, outputs = vgg19.get_layer('block5_conv4').output)
-        model.trainable = False
-
-        return K.mean(K.square(model(true) - model(prediction)))
 
     def build_generator(self):
         generator_input = Input(shape = (self.height, self.width, self.channels))
