@@ -102,7 +102,7 @@ class DCGAN():
         return layer
     
     def build_generator(self):
-        model = Sequential()
+        generator = Sequential()
 
         generator.add(Dense(128 * 7 * 7, activation = 'relu', input_dim = self.latent_dimension))
         generator.add(Reshape((7, 7, 128)))
