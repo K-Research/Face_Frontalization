@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 70
+time = 71
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
@@ -248,7 +248,7 @@ class DCGAN():
                     self.save_image(front_image = front_image, side_image = side_image, save_path = save_path)
 
             if k % 1 == 0:
-                self.generator.to_json(save_path + 'generator_json_epoch_%d.json' % k)
+                self.generator.to_json()
 
             if k % 1 == 0:
                 self.generator.save_weights(save_path + 'generator_epoch_%d.h5' % k)
