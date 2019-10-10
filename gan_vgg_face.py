@@ -114,7 +114,7 @@ class GAN():
 
         model = Model(inputs = vgg16_layer.input, outputs = discriminator_output)
 
-        model.summary()
+        # model.summary()
 
         return model
 
