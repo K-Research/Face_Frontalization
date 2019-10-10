@@ -1,11 +1,11 @@
 from __future__ import print_function, division
 
 from keras.applications.vgg19 import VGG19
-import keras.backend as K
-from keras.layers import Activation, add, BatchNormalization, Conv2D, Dense, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
+from keras_vggface.vggface import VGGFace
 import math
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,11 +26,11 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 # print(X_test.shape)
 # print(Y_test.shape)
 
-train_epochs = 100000
+train_epochs = 10000
 batch_size = 32
 save_interval = 1
 
-class DCGAN():
+class GAN():
     def __init__(self):
         # Rescale -1 to 1
         self.X_train = X_train / 127.5 - 1.
@@ -58,10 +58,9 @@ class DCGAN():
 
         # Build and compile the generator
         self.generator = self.build_generator()
-        self.generator.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
 
         # The generator takes noise as input and generates imgs
-        z = Input(shape = (self.height, self.width, self.channels))
+        z = Input(shape = (self.height, self.width, self.channels, ))
         image = self.generator(z)
 
         # For the combined model we will only train the generator
@@ -72,124 +71,52 @@ class DCGAN():
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, [image, valid])
-        self.combined.compile(loss = [self.vgg19_loss, 'binary_crossentropy'], loss_weights=[1., 1e-3], optimizer = self.optimizer)
+        self.combined = Model(z, valid)
+        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
 
-    def residual_block(self, layer, filters, kernel_size, strides):
-        generator = layer
-
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(generator)
-        layer = BatchNormalization(momentum = 0.5)(layer)
-
-        # Using Parametric ReLU
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'same')(layer)
-        output = BatchNormalization(momentum = 0.5)(layer)
-
-        model = add([generator, output])
-
-        return model
-
-    def up_sampling_block(self, layer, filters, kernel_size, strides):
-        # In place of Conv2D and UpSampling2D we can also use Conv2DTranspose (Both are used for Deconvolution)
-        # Even we can have our own function for deconvolution (i.e one made in Utils.py)
-        # layer = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = 'same)(layer)
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(layer)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = LeakyReLU(alpha = 0.2)(layer)
-
-        return layer
-    
-    # computes VGG loss or content loss
-    def vgg19_loss(self, true, prediction):
-        vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (self.height, self.width, self.channels))
-        # Make trainable as False
-
-        vgg19.trainable = False
-
-        for layer in vgg19.layers:
-            layer.trainable = False
-        
-        model = Model(inputs = vgg19.input, outputs = vgg19.get_layer('block5_conv4').output)
-        model.trainable = False
-
-        return K.mean(K.square(model(true) - model(prediction)))
-
     def build_generator(self):
-        generator_input = Input(shape = (self.height, self.width, self.channels))
+        vgg16_layer = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
-        generator_layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_input)
-        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer)
-        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer) #
-        generator_layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_layer) #
-        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer) #
-        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer) #
-        generator_layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_layer) #
-        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer) #
-        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer) #
+        vgg16_layer.trainable = False
 
-        previous_output = generator_layer
+        # vgg16_layer.summary()
+        
+        vgg16_last_layer = vgg16_layer.get_layer('pool5').output
+        layer = Conv2DTranspose(filters = 512, kernel_size = (2, 2), strides = (2, 2), padding = 'valid')(vgg16_last_layer)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+        layer = Conv2DTranspose(filters = 512, kernel_size = (2, 2), strides = (2, 2), padding = 'valid')(layer)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+        layer = Conv2DTranspose(filters = 256, kernel_size = (2, 2), strides = (2, 2), padding = 'valid')(layer)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+        layer = Conv2DTranspose(filters = 128, kernel_size = (2, 2), strides = (2, 2), padding = 'valid')(layer)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+        layer = Conv2DTranspose(filters = 64, kernel_size = (2, 2), strides = (2, 2), padding = 'valid')(layer)
+        layer = LeakyReLU(alpha = 0.2)(layer)
+        layer = Conv2DTranspose(filters = self.channels, kernel_size = (1, 1), strides = (1, 1), padding = 'valid')(layer)
 
-        # Using 16 Residual Blocks
-        for i in range(16):
-            generator_layer = self.residual_block(layer = generator_layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
+        discriminator_output = Activation('tanh')(layer)
 
-        generator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.5)(generator_layer)
-        generator_layer = add([previous_output, generator_layer])
-
-        # Using 2 UpSampling Blocks
-        for j in range(3):
-            generator_layer = self.up_sampling_block(layer = generator_layer, filters = 256, kernel_size = 3, strides = 1)
-
-        generator_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(generator_layer)
-        generator_output = Activation('tanh')(generator_layer)
-
-        model = Model(inputs = generator_input, outputs = generator_output)
+        model = Model(inputs = vgg16_layer.input, outputs = discriminator_output)
 
         # model.summary()
 
         return model
 
     def build_discriminator(self):
-        discriminator = Sequential()
+        vgg16_layer = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
-        discriminator.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(128, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(512, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(512, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Flatten())
-        discriminator.add(Dense(1024))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Dense(1, activation = 'sigmoid'))
+        vgg16_layer.trainable = False
 
-        # discriminator.summary()
+        # vgg16_layer.summary()
+        
+        vgg16_last_layer = vgg16_layer.get_layer('pool5').output
+        layer = Flatten()(vgg16_last_layer)
 
-        generated_image = Input(shape = (self.height, self.width, self.channels))
-        validity = discriminator(generated_image)
+        discriminator_output = Dense(1, activation = 'sigmoid')(layer)
 
-        model = Model(generated_image, validity)
+        model = Model(inputs = vgg16_layer.input, outputs = discriminator_output)
 
         # model.summary()
 
@@ -226,13 +153,13 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
+                generator_loss = self.combined.train_on_batch(side_image, real)
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
-                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
@@ -240,8 +167,12 @@ class DCGAN():
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(front_image = front_image, side_image = side_image, save_path = save_path)
 
-            if k % 100 == 0:
+            if k == 1000:
+                self.generator.to_json()
+
+            if k % 1000 == 0:
                 self.generator.save(save_path + 'generator_epoch_%d.h5' % k)
+                self.generator.save_weights(save_path + 'generator_weights_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
@@ -337,5 +268,5 @@ class DCGAN():
         plt.close()
 
 if __name__ == '__main__':
-    dcgan = DCGAN()
-    dcgan.train(epochs = train_epochs, batch_size = batch_size, save_interval = save_interval)
+    gan = GAN()
+    gan.train(epochs = train_epochs, batch_size = batch_size, save_interval = save_interval)
