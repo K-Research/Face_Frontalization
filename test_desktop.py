@@ -77,8 +77,8 @@ class DCGAN():
 
         # self.combined.summary()
 
-    def residual_block(self, model, filters, kernel_size, strides):
-        generator = model
+    def residual_block(self, layer, filters, kernel_size, strides):
+        generator = layer
 
         layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(generator)
         layer = BatchNormalization(momentum = 0.5)(layer)
@@ -92,11 +92,11 @@ class DCGAN():
 
         return model
 
-    def up_sampling_block(self, model, filters, kernel_size, strides):
+    def up_sampling_block(self, layer, filters, kernel_size, strides):
         # In place of Conv2D and UpSampling2D we can also use Conv2DTranspose (Both are used for Deconvolution)
         # Even we can have our own function for deconvolution (i.e one made in Utils.py)
         # layer = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = 'same)(layer)
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
+        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(layer)
         layer = UpSampling2D(size = (2, 2))(layer)
         layer = LeakyReLU(alpha = 0.2)(layer)
 
@@ -134,7 +134,7 @@ class DCGAN():
 
         # Using 16 Residual Blocks
         for i in range(16):
-            generator_layer = self.residual_block(model = layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
+            generator_layer = self.residual_block(layer = generator_layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
 
         generator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.5)(generator_layer)
@@ -142,10 +142,10 @@ class DCGAN():
 
         # Using 2 UpSampling Blocks
         for j in range(3):
-            generator_layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = 3, strides = 1)
+            generator_layer = self.up_sampling_block(layer = generator_layer, filters = 256, kernel_size = 3, strides = 1)
 
         generator_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(generator_layer)
-        generator_output = Activation('tanh')(layer)
+        generator_output = Activation('tanh')(generator_layer)
 
         model = Model(inputs = generator_input, outputs = generator_output)
 
