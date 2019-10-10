@@ -171,7 +171,7 @@ class GAN():
                 self.generator.to_json()
 
             if k % 1000 == 0:
-                self.generator.save_weights(save_path + 'generator_epoch_%d.h5' % k)
+                self.generator.save(save_path + 'generator_epoch_%d.h5' % k)
                 self.generator.save_weights(save_path + 'generator_weights_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)

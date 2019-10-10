@@ -79,7 +79,7 @@ class GAN():
     def build_generator(self):
         vgg16_layer = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
-        vgg16_layer.trainable = False
+        # vgg16_layer.trainable = False
 
         # vgg16_layer.summary()
         
