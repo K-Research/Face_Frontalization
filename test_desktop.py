@@ -77,13 +77,6 @@ class DCGAN():
 
         # self.combined.summary()
 
-    def discriminator_block(self, model, filters, kernel_size, strides):
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
-        layer = BatchNormalization(momentum = 0.5)(layer)
-        layer = LeakyReLU(alpha = 0.2)(layer)
-
-        return layer
-
     def residual_block(self, model, filters, kernel_size, strides):
         generator = model
 
@@ -125,36 +118,36 @@ class DCGAN():
         return K.mean(K.square(model(true) - model(prediction)))
 
     def build_generator(self):
-        input = Input(shape = (self.height, self.width, self.channels))
+        generator_input = Input(shape = (self.height, self.width, self.channels))
 
-        layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(input)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer) #
-        layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer) #
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer) #
-        layer = MaxPooling2D(pool_size = (2, 2))(layer) #
-        layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer) #
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer) #
-        layer = MaxPooling2D(pool_size = (2, 2))(layer) #
+        generator_layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_input)
+        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer)
+        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer) #
+        generator_layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_layer) #
+        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer) #
+        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer) #
+        generator_layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_layer) #
+        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer) #
+        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer) #
 
-        previous_output = layer
+        previous_output = generator_layer
 
         # Using 16 Residual Blocks
         for i in range(16):
-            layer = self.residual_block(model = layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
+            generator_layer = self.residual_block(model = layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
 
-        layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(layer)
-        layer = BatchNormalization(momentum = 0.5)(layer)
-        layer = add([previous_output, layer])
+        generator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.5)(generator_layer)
+        generator_layer = add([previous_output, generator_layer])
 
         # Using 2 UpSampling Blocks
         for j in range(3):
-            layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = 3, strides = 1)
+            generator_layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = 3, strides = 1)
 
-        layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(layer)
-        output = Activation('tanh')(layer)
+        generator_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(generator_layer)
+        generator_output = Activation('tanh')(layer)
 
-        model = Model(inputs = input, outputs = output)
+        model = Model(inputs = generator_input, outputs = generator_output)
 
         # model.summary()
 
