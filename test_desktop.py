@@ -79,7 +79,7 @@ class GAN():
     def build_generator(self):
         vgg16_layer = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
-        # vgg16_layer.trainable = False
+        vgg16_layer.trainable = False
 
         # vgg16_layer.summary()
         
@@ -96,9 +96,9 @@ class GAN():
         layer = LeakyReLU(alpha = 0.2)(layer)
         layer = Conv2DTranspose(filters = self.channels, kernel_size = (1, 1), strides = (1, 1), padding = 'valid')(layer)
 
-        discriminator_output = Activation('tanh')(layer)
+        generator_output = Activation('tanh')(layer)
 
-        model = Model(inputs = vgg16_layer.input, outputs = discriminator_output)
+        model = Model(inputs = vgg16_layer.input, outputs = generator_output)
 
         # model.summary()
 
