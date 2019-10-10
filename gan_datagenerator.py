@@ -4,7 +4,7 @@ from keras.models import Model, Input
 from keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import os
-from datagenerator_read_dir import DataGenerator
+from datagenerator_read_dir_face import DataGenerator
 from glob import glob
 
 
