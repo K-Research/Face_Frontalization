@@ -26,7 +26,7 @@ Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_
 # print(X_test.shape)
 # print(Y_test.shape)
 
-train_epochs = 100000
+train_epochs = 1
 batch_size = 32
 save_interval = 1
 
@@ -250,7 +250,7 @@ class DCGAN():
             if k % 1 == 0:
                 self.generator.to_json(save_path + 'generator_json_epoch_%d.json' % k)
 
-            if k % 100 == 0:
+            if k % 1 == 0:
                 self.generator.save_weights(save_path + 'generator_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
