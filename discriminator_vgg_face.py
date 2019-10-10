@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 76
+time = 75
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
@@ -156,6 +156,8 @@ class DCGAN():
 
     def build_discriminator(self):
         vgg16_layer = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+
+        vgg16_layer.trainable = False
 
         # vgg16_layer.summary()
         

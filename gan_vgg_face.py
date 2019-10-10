@@ -26,7 +26,7 @@ Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_
 # print(X_test.shape)
 # print(Y_test.shape)
 
-train_epochs = 100000
+train_epochs = 10000
 batch_size = 32
 save_interval = 1
 
@@ -79,6 +79,8 @@ class GAN():
     def build_generator(self):
         vgg16_layer = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
+        vgg16_layer.trainable = False
+
         # vgg16_layer.summary()
         
         vgg16_last_layer = vgg16_layer.get_layer('pool5').output
@@ -104,6 +106,8 @@ class GAN():
 
     def build_discriminator(self):
         vgg16_layer = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+
+        vgg16_layer.trainable = False
 
         # vgg16_layer.summary()
         
@@ -163,8 +167,12 @@ class GAN():
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(front_image = front_image, side_image = side_image, save_path = save_path)
 
-            if k % 100 == 0:
-                self.generator.save(save_path + 'generator_epoch_%d.h5' % k)
+            if k == 1000:
+                self.generator.to_json()
+
+            if k % 1000 == 0:
+                self.generator.save_weights(save_path + 'generator_epoch_%d.h5' % k)
+                self.generator.save_weights(save_path + 'generator_weights_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
