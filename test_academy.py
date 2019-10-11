@@ -196,7 +196,10 @@ class DCGAN():
         leakyrelu_5_2 = LeakyReLU(alpha = 0.2)(convolution2d_5_2)
         maxpooling2d_5_1 = MaxPooling2D(pool_size = (2, 2))(leakyrelu_5_2)
 
-        model = Model(discriminator_input, maxpooling2d_5_1)
+        Flatten_6_1 = Flatten()(maxpooling2d_5_1)
+        desnse_6_1 = Dense(units = 1, activation = 'sigmoid')(Flatten_6_1)
+
+        model = Model(discriminator_input, desnse_6_1)
 
         model.summary()
 
@@ -314,7 +317,7 @@ class DCGAN():
             if not os.path.isdir(save_path):
                 os.makedirs(save_path)
 
-            save_name = 'Train%d_Batch%d_%d.png' % (number, self.number)
+            save_name = 'Train%d_Batch%d_%d.png' % (number, m, self.number)
             save_name = os.path.join(save_path, save_name)
         
             plt.savefig(save_name)
