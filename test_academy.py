@@ -196,10 +196,18 @@ class DCGAN():
         leakyrelu_5_2 = LeakyReLU(alpha = 0.2)(convolution2d_5_2)
         maxpooling2d_5_1 = MaxPooling2D(pool_size = (2, 2))(leakyrelu_5_2)
 
-        Flatten_6_1 = Flatten()(maxpooling2d_5_1)
-        desnse_6_1 = Dense(units = 1, activation = 'sigmoid')(Flatten_6_1)
+        zeropadding_6_1 = ZeroPadding2D(padding = (1, 1))(maxpooling2d_5_1)
+        convolution2d_6_1 = Conv2D(filters = 512, kernel_size = (2, 2), strides = (1, 1))(zeropadding_6_1)
+        leakyrelu_6_1 = LeakyReLU(alpha = 0.2)(convolution2d_6_1)
+        zeropadding_6_2 = ZeroPadding2D(padding = (1, 1))(leakyrelu_6_1)
+        convolution2d_6_2 = Conv2D(filters = 512, kernel_size = (2, 2), strides = (1, 1))(zeropadding_6_2)
+        leakyrelu_6_2 = LeakyReLU(alpha = 0.2)(convolution2d_6_2)
+        maxpooling2d_6_1 = MaxPooling2D(pool_size = (2, 2))(leakyrelu_6_2)
 
-        model = Model(discriminator_input, desnse_6_1)
+        flatten_7_1 = Flatten()(maxpooling2d_6_1)
+        desnse_7_1 = Dense(units = 1, activation = 'sigmoid')(flatten_7_1)
+
+        model = Model(discriminator_input, desnse_7_1)
 
         model.summary()
 
