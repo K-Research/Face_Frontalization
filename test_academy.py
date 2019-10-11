@@ -2,7 +2,7 @@ from __future__ import print_function, division
 
 from keras.applications.vgg19 import VGG19
 import keras.backend as K
-from keras.layers import Activation, add, BatchNormalization, Conv2D, Dense, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Dense, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 74
+time = 77
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
@@ -50,7 +50,7 @@ class DCGAN():
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
-        self.number = 0
+        self.number = 1
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -142,7 +142,7 @@ class DCGAN():
 
         # Using 2 UpSampling Blocks
         for j in range(3):
-            generator_layer = self.up_sampling_block(layer = generator_layer, filters = 256, kernel_size = 3, strides = 1)
+            generator_layer = self.up_sampling_block(layer = generator_layer, filters = 256, kernel_size = (3, 3), strides = (1, 1))
 
         generator_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(generator_layer)
         generator_output = Activation('tanh')(generator_layer)
@@ -154,44 +154,54 @@ class DCGAN():
         return model
 
     def build_discriminator(self):
-        discriminator = Sequential()
+        discriminator_input = Input(shape = (self.height, self.width, self.channels))
 
-        discriminator.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(128, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(512, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(512, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Flatten())
-        discriminator.add(Dense(1024))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Dense(1, activation = 'sigmoid'))
+        zeropadding_1_1 = ZeroPadding2D(padding = (1, 1))(discriminator_input)
+        convolution2d_1_1 = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1))(zeropadding_1_1)
+        leakyrelu_1_1 = LeakyReLU(alpha = 0.2)(convolution2d_1_1)
+        zeropadding_1_2 = ZeroPadding2D(padding = (1, 1))(leakyrelu_1_1)
+        convolution2d_1_2 = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1))(zeropadding_1_2)
+        leakyrelu_1_2 = LeakyReLU(alpha = 0.2)(convolution2d_1_2)
+        maxpooling2d_1_1 = MaxPooling2D(pool_size = (2, 2))(leakyrelu_1_2)
 
-        # discriminator.summary()
+        zeropadding_2_1 = ZeroPadding2D(padding = (1, 1))(maxpooling2d_1_1)
+        convolution2d_2_1 = Conv2D(filters = 128, kernel_size = (2, 2), strides = (1, 1))(zeropadding_2_1)
+        leakyrelu_2_1 = LeakyReLU(alpha = 0.2)(convolution2d_2_1)
+        zeropadding_2_2 = ZeroPadding2D(padding = (1, 1))(leakyrelu_2_1)
+        convolution2d_2_2 = Conv2D(filters = 128, kernel_size = (2, 2), strides = (1, 1))(zeropadding_2_2)
+        leakyrelu_2_2 = LeakyReLU(alpha = 0.2)(convolution2d_2_2)
+        maxpooling2d_2_1 = MaxPooling2D(pool_size = (2, 2))(leakyrelu_2_2)
 
-        generated_image = Input(shape = (self.height, self.width, self.channels))
-        validity = discriminator(generated_image)
+        zeropadding_3_1 = ZeroPadding2D(padding = (1, 1))(maxpooling2d_2_1)
+        convolution2d_3_1 = Conv2D(filters = 256, kernel_size = (2, 2), strides = (1, 1))(zeropadding_3_1)
+        leakyrelu_3_1 = LeakyReLU(alpha = 0.2)(convolution2d_3_1)
+        zeropadding_3_2 = ZeroPadding2D(padding = (1, 1))(leakyrelu_3_1)
+        convolution2d_3_2 = Conv2D(filters = 256, kernel_size = (2, 2), strides = (1, 1))(zeropadding_3_2)
+        leakyrelu_3_2 = LeakyReLU(alpha = 0.2)(convolution2d_3_2)
+        maxpooling2d_3_1 = MaxPooling2D(pool_size = (2, 2))(leakyrelu_3_2)
+        
+        zeropadding_4_1 = ZeroPadding2D(padding = (1, 1))(maxpooling2d_3_1)
+        convolution2d_4_1 = Conv2D(filters = 512, kernel_size = (2, 2), strides = (1, 1))(zeropadding_4_1)
+        leakyrelu_4_1 = LeakyReLU(alpha = 0.2)(convolution2d_4_1)
+        zeropadding_4_2 = ZeroPadding2D(padding = (1, 1))(leakyrelu_4_1)
+        convolution2d_4_2 = Conv2D(filters = 512, kernel_size = (2, 2), strides = (1, 1))(zeropadding_4_2)
+        leakyrelu_4_2 = LeakyReLU(alpha = 0.2)(convolution2d_4_2)
+        maxpooling2d_4_1 = MaxPooling2D(pool_size = (2, 2))(leakyrelu_4_2)
+        
+        zeropadding_5_1 = ZeroPadding2D(padding = (1, 1))(maxpooling2d_4_1)
+        convolution2d_5_1 = Conv2D(filters = 512, kernel_size = (2, 2), strides = (1, 1))(zeropadding_5_1)
+        leakyrelu_5_1 = LeakyReLU(alpha = 0.2)(convolution2d_5_1)
+        zeropadding_5_2 = ZeroPadding2D(padding = (1, 1))(leakyrelu_5_1)
+        convolution2d_5_2 = Conv2D(filters = 512, kernel_size = (2, 2), strides = (1, 1))(zeropadding_5_2)
+        leakyrelu_5_2 = LeakyReLU(alpha = 0.2)(convolution2d_5_2)
+        maxpooling2d_5_1 = MaxPooling2D(pool_size = (2, 2))(leakyrelu_5_2)
 
-        model = Model(generated_image, validity)
+        Flatten_6_1 = Flatten()(maxpooling2d_5_1)
+        desnse_6_1 = Dense(units = 1, activation = 'sigmoid')(Flatten_6_1)
 
-        # model.summary()
+        model = Model(discriminator_input, desnse_6_1)
+
+        model.summary()
 
         return model
 
@@ -237,19 +247,20 @@ class DCGAN():
                 # If at save interval -> save generated image samples
                 if l % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
-                    self.save_image(front_image = front_image, side_image = side_image, save_path = save_path)
+                    self.save_image(front_image = front_image, number = k, side_image = side_image, save_path = save_path)
 
             if k % 100 == 0:
                 self.generator.to_json()
 
             if k % 100 == 0:
-                self.generator.save_weights(save_path + 'generator_epoch_%d.h5' % k)
+                self.generator.save(save_path + 'generator_epoch_%d.h5' % k)
+                self.generator.save_weights(save_path + 'generator_weights_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
         self.graph(history = self.history, save_path = save_path)
 
-    def save_image(self, front_image, side_image, save_path):
+    def save_image(self, front_image, number, side_image, save_path):
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
 
@@ -306,7 +317,7 @@ class DCGAN():
             if not os.path.isdir(save_path):
                 os.makedirs(save_path)
 
-            save_name = '%d.png' % self.number
+            save_name = 'Train%d_Batch%d_%d.png' % (number, m, self.number)
             save_name = os.path.join(save_path, save_name)
         
             plt.savefig(save_name)

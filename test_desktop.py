@@ -216,10 +216,10 @@ class DCGAN():
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(front_image = front_image, number = k, side_image = side_image, save_path = save_path)
 
-            if k == 1000:
+            if k == 100:
                 self.generator.to_json()
 
-            if k % 1000 == 0:
+            if k % 100 == 0:
                 self.generator.save(save_path + 'generator_epoch_%d.h5' % k)
                 self.generator.save_weights(save_path + 'generator_weights_epoch_%d.h5' % k)
 
