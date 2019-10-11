@@ -27,7 +27,7 @@ Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagen
 # print(X_test.shape)
 # print(Y_test.shape)
 
-train_epochs = 10
+train_epochs = 20
 batch_size = 32
 save_interval = 1
 
@@ -184,9 +184,6 @@ class DCGAN():
         return model
 
     def train(self, epochs, batch_size, save_interval):
-        # Save .json
-        self.generator.to_json()
-
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
         real = np.ones((batch_size, 1))
@@ -234,7 +231,7 @@ class DCGAN():
                     os.makedirs(self.save_path + 'H5/')
 
                 self.generator.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % k)
-                self.generator.save_weights(self.save_path + 'generator_weights_epoch_%d.h5' % k)
+                self.generator.save_weights(self.save_path + 'H5/' + 'generator_weights_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
