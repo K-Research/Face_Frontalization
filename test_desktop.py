@@ -284,7 +284,7 @@ class DCGAN():
             if not os.path.isdir(save_path):
                 os.makedirs(save_path)
 
-            save_name = 'Train%d_Batch%d_%d.png' % (number, self.number)
+            save_name = 'Train%d_Batch%d_%d.png' % (number, m, self.number)
             save_name = os.path.join(save_path, save_name)
         
             plt.savefig(save_name)
