@@ -50,6 +50,7 @@ class DCGAN():
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
+        self.number = 1
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -261,6 +262,8 @@ class DCGAN():
                 original_front_face_image_plot.axis('off')
                 original_side_face_image_plot.axis('off')
 
+                self.number += 1
+
                 # plt.show()
 
             save_path = save_path
@@ -269,7 +272,7 @@ class DCGAN():
             if not os.path.isdir(save_path):
                 os.makedirs(save_path)
 
-            save_name = 'Train%d_Batch%d.png' % (number, m)
+            save_name = 'Train%d_Batch%d_%d.png' % (number, m, self.number)
             save_name = os.path.join(save_path, save_name)
         
             plt.savefig(save_name)
