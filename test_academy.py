@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 77
+time = 78
 
 # Load data
 X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
@@ -224,9 +224,7 @@ class DCGAN():
 
                 # Generate a batch of new images
                 side_image = self.X_train[index]
-
-                # optimizer.zero_grad()
-                
+               
                 generated_image = self.generator.predict(side_image)
 
                 self.discriminator.trainable = True
