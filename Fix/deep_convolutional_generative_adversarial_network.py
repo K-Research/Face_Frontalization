@@ -61,7 +61,11 @@ class DCGAN():
         self.generator = self.build_generator()
 
         # Save .json
-        self.generator.to_json()
+        generator_model_json = self.generator.to_json()
+
+        # Check folder presence
+        if not os.path.isdir(self.save_path + 'Json/'):
+            os.makedirs(self.save_path + 'Json/')
 
         # The generator takes noise as input and generates imgs
         z = Input(shape = (self.latent_dimension, ))
@@ -214,7 +218,7 @@ class DCGAN():
                     os.makedirs(self.save_path + 'H5/')
 
                 self.generator.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % k)
-                self.generator.save_weights(save_path + 'generator_weights_epoch_%d.h5' % k)
+                self.generator.save_weights(self.save_path + 'generator_weights_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
