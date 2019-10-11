@@ -209,7 +209,7 @@ class DCGAN():
 
         model = Model(discriminator_input, desnse_7_1)
 
-        model.summary()
+        # model.summary()
 
         return model
 
