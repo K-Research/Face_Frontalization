@@ -50,7 +50,6 @@ class DCGAN():
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
-        self.number = 0
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -237,7 +236,7 @@ class DCGAN():
                 # If at save interval -> save generated image samples
                 if l % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
-                    self.save_image(front_image = front_image, side_image = side_image, save_path = save_path)
+                    self.save_image(front_image = front_image, number = k, side_image = side_image, save_path = save_path)
 
             if k % 100 == 0:
                 self.generator.to_json()
@@ -249,7 +248,7 @@ class DCGAN():
 
         self.graph(history = self.history, save_path = save_path)
 
-    def save_image(self, front_image, side_image, save_path):
+    def save_image(self, front_image, number, side_image, save_path):
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
 
@@ -296,8 +295,6 @@ class DCGAN():
                 original_front_face_image_plot.axis('off')
                 original_side_face_image_plot.axis('off')
 
-                self.number += 1
-
                 # plt.show()
 
             save_path = save_path
@@ -306,7 +303,7 @@ class DCGAN():
             if not os.path.isdir(save_path):
                 os.makedirs(save_path)
 
-            save_name = '%d.png' % self.number
+            save_name = 'Train%d_Batch%d.png' % (number, m)
             save_name = os.path.join(save_path, save_name)
         
             plt.savefig(save_name)
