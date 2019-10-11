@@ -124,7 +124,7 @@ class DCGAN():
 
         # Using 2 UpSampling Blocks
         for j in range(3):
-            generator_layer = self.up_sampling_block(layer = generator_layer, filters = 256, kernel_size = 3, strides = 1)
+            generator_layer = self.up_sampling_block(layer = generator_layer, filters = 256, kernel_size = (3, 3), strides = (1, 1))
 
         generator_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(generator_layer)
         generator_output = Activation('tanh')(generator_layer)
