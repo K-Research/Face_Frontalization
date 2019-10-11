@@ -61,6 +61,9 @@ class DCGAN():
         self.generator = self.build_generator()
         self.generator.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
 
+        # Save .json
+        self.generator.to_json()
+
         # The generator takes noise as input and generates imgs
         z = Input(shape = (self.height, self.width, self.channels))
         image = self.generator(z)
@@ -207,9 +210,6 @@ class DCGAN():
         return model
 
     def train(self, epochs, batch_size, save_interval):
-        # Save .json
-        self.generator.to_json()
-
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
         real = np.ones((batch_size, 1))
