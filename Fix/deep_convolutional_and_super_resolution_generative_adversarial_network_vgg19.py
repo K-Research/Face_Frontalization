@@ -51,6 +51,7 @@ class DCGAN():
         self.n_show_image = 1 # Number of images to show
         self.history = []
         self.number = 1
+        self.save_path = 'D:/Generated Image/Training' + str(time) + '/'
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -59,6 +60,9 @@ class DCGAN():
         # Build and compile the generator
         self.generator = self.build_generator()
         self.generator.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
+
+        # Save .json
+        self.generator.to_json()
 
         # The generator takes noise as input and generates imgs
         z = Input(shape = (self.height, self.width, self.channels))
@@ -210,9 +214,7 @@ class DCGAN():
 
                 # Generate a batch of new images
                 side_image = self.X_train[index]
-
-                # optimizer.zero_grad()
-                
+               
                 generated_image = self.generator.predict(side_image)
 
                 self.discriminator.trainable = True
@@ -239,15 +241,18 @@ class DCGAN():
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = save_path)
 
-            if k % 100 == 0:
-                self.generator.to_json()
+            # Save .h5
+            if k % 5 == 0:
+                # Check folder presence
+                if not os.path.isdir(self.save_path + 'H5/'):
+                    os.makedirs(self.save_path + 'H5/')
 
-            if k % 100 == 0:
-                self.generator.save_weights(save_path + 'generator_epoch_%d.h5' % k)
+                self.generator.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % k)
+                self.generator.save_weights(save_path + 'generator_weights_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
-        self.graph(history = self.history, save_path = save_path)
+        self.graph(history = self.history, save_path = self.save_path + 'History/')
 
     def save_image(self, front_image, side_image, train_number, epoch_number, save_path):
         # Rescale images 0 - 1
