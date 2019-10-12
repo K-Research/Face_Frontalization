@@ -1,31 +1,50 @@
+from glob import glob
 import cv2
-import os
+from crop_img import crop_progress
+import numpy as np
 
-def facecrop(image_path):
-    cascade = cv2.CascadeClassifier('D:/Bitcamp/Project/Frontalization/opencv-master/data/haarcascades_cuda/haarcascade_frontalface_alt.xml')
+path = "d:/Selected_Img"
+save_Xpath = "d:/X/"
+save_Ypath = "d:/Y/"
+imgs = glob(path+"/*.jpg")
+# crop_front_img = np.zeros(300)
+# print(imgs)
+# for front in range(1, 301):
+#     front = "{0:03}".format(front)
+#     # print(front)
+#     front_img_name = path + "/" + front + "-2-07.jpg"
+#     print(front_img_name)
+#     front_image = cv2.imread(front_img_name, cv2.IMREAD_COLOR)
+#     crop_front_img = crop_progress(front_image)
+#     # print(crop_front_img.shape)
+#     # cv2.imshow("crop_img",crop_front_img)
+#     # cv2.waitKey(0)
+#     # cv2.destroyAllWindows()
 
-    image = cv2.imread(image_path)
+for img in imgs:
+    temp = img.find("\\")
+    # print(temp)
+    img_name = img[temp+1:]
+    # print(img_name)
+    person, l, c = img_name.split('.')[0].split('-')
+    front_img_name = path + "/" + person + "-2-07.jpg"
+    # print(front_img_name)
+    front_image = cv2.imread(front_img_name, cv2.IMREAD_COLOR)
+    crop_front_img = crop_progress(front_image)
+    # print(person, l, c)
+    # img = img[:temp] +'/'+ img_name
+    # print(img)
+    if c == '07':
+        continue
+    image = cv2.imread(img, cv2.IMREAD_COLOR)
+    crop_img = crop_progress(image)
+    if crop_img is None:
+        continue
 
-    minisize = (image.shape[1], image.shape[0])
-    miniframe = cv2.resize(image, minisize)
-
-    faces = cascade.detectMultiScale(miniframe)
-
-    for i in faces:
-        x, y, w, h = [v for v in i]
-        
-        cv2.rectangle(image, (x, y), (x + w, y + h), (255, 255, 255))
-
-        find_face = image[y : y + h, x : x + w]
-        find_face = cv2.resize(find_face, (28, 28))
-
-        directory, file_name = os.path.split(image_path)
-        cv2.imwrite(save_path + file_name, find_face)
-
-    return
-
-image_path = 'D:/Download/4.jpg'
-save_path = 'D:/cropped_image/'
-
-if __name__ == '__main__':
-    facecrop(image_path)
+    cv2.imwrite(save_Xpath + img_name + ".jpg", crop_img)
+    cv2.imwrite(save_Ypath + img_name + ".jpg", crop_front_img)
+    # print(ljh_hansome))
+    # print(crop_img.shape)
+    # cv2.imshow("crop_img",crop_img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
