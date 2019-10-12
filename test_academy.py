@@ -242,8 +242,6 @@ class DCGAN():
                 record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
-                print(self.history)
-
                 # If at save interval -> save generated image samples
                 if l % save_interval == 0:
                     self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
