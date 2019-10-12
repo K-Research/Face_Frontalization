@@ -197,7 +197,7 @@ class DCGAN():
         print('Training')
 
         for k in range(1, epochs + 1):
-            for l in tqdm(range(1, int(self.datagenerator.__len__) + 1)):
+            for l in tqdm(range(self.datagenerator.__len__)):
                 # Select a random half of images
                 # index = np.random.randint(0, self.X_train.shape[0], batch_size)
                 
