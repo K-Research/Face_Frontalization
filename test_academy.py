@@ -37,8 +37,6 @@ class DCGAN():
 
         self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 
-        self.batch = int(self.X_train.shape[0] / batch_size)
-
         self.n_show_image = 1 # Number of images to show
         self.history = []
         self.number = 1
