@@ -21,8 +21,8 @@ np.random.seed(10)
 time = 80
 
 # Load data
-X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/X/*jpg')
-Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/Y/*jpg')
+X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/X/*jpg')
+Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/Y/*jpg')
 
 train_epochs = 100
 batch_size = 32
@@ -217,7 +217,7 @@ class DCGAN():
 
         for k in range(1, epochs + 1):
             for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
-                 # Select images
+                # Select images
                 side_image, front_image = self.datagenerator.__getitem__(l)
 
                 # Generate a batch of new images
