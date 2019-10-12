@@ -30,7 +30,6 @@ save_interval = 1
 
 class DCGAN():
     def __init__(self):
-
         # Load data
         self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
 
