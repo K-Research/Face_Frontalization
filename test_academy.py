@@ -227,11 +227,11 @@ class DCGAN():
             for l in tqdm(range(1, self.batch + 1)):
                 # Select a random half of images
                 index = np.random.randint(0, self.X_train.shape[0], batch_size)
-                front_image = self.Y_train[index]
 
-                # Generate a batch of new images
+                front_image = self.Y_train[index]
                 side_image = self.X_train[index]
                
+                # Generate a batch of new images
                 generated_image = self.generator.predict(side_image)
 
                 self.discriminator.trainable = True
