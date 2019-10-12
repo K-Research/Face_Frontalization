@@ -21,29 +21,17 @@ np.random.seed(10)
 time = 1
 
 # Load data
-# X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
-# Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_y.npy') # Front face
-
 X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/X/*jpg')
 Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/Y/*jpg')
 
-# print(X_train.shape)
-# print(Y_train.shape)
-# print(X_test.shape)
-# print(Y_test.shape)
-
 train_epochs = 20
-batch_size = 32
+batch_size = 8
 save_interval = 1
 
 class DCGAN():
     def __init__(self):
-        # Rescale -1 to 1
-        # self.X_train = X_train / 127.5 - 1.
-        # self.Y_train = Y_train / 127.5 - 1.
-        # X_test = X_test / 127.5 - 1.
-        # Y_test = Y_test / 127.5 - 1.
-        # Load dataset
+
+        # Load data
         self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
 
         # Prameters
@@ -52,8 +40,6 @@ class DCGAN():
         self.channels = 3
 
         self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
-
-        # self.batch = int(self.X_train.shape[0] / batch_size)
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
@@ -185,7 +171,7 @@ class DCGAN():
 
         model = Model(inputs = senet50_layer.input, outputs = discriminator_output)
 
-        model.summary()
+        # model.summary()
 
         return model
 
@@ -197,12 +183,8 @@ class DCGAN():
         print('Training')
 
         for k in range(1, epochs + 1):
-            for l in tqdm(range(self.datagenerator.__len__)):
-                # Select a random half of images
-                # index = np.random.randint(0, self.X_train.shape[0], batch_size)
-                
-                # front_image = self.Y_train[index]
-                # side_image = self.X_train[index]
+            for l in tqdm(range(self.datagenerator.__len__() + 1)):
+                # Select images
                 side_image, front_image = self.datagenerator.__getitem__(l)
 
                 # Generate a batch of new images
@@ -248,8 +230,8 @@ class DCGAN():
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
 
-        # front_image = (127.5 * (front_image + 1)).astype(np.uint8)
-        # side_image = (127.5 * (side_image + 1)).astype(np.uint8)
+        front_image = (127.5 * (front_image + 1)).astype(np.uint8)
+        side_image = (127.5 * (side_image + 1)).astype(np.uint8)
 
         # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
         for m in range(batch_size):
