@@ -246,7 +246,7 @@ class DCGAN():
                 # If at save interval -> save generated image samples
                 if l % save_interval == 0:
                     save_path = 'D:/Generated Image/Training' + str(time) + '/'
-                    self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = save_path)
+                    self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
 
             # Save .h5
             if k % 5 == 0:
@@ -325,9 +325,9 @@ class DCGAN():
             plt.close()
 
     def graph(self, history, save_path):
-        plt.plot(self.history[:, 2])     
-        plt.plot(self.history[:, 3])
-        plt.plot(self.history[:, 4])
+        plt.plot(self.history[  :  , 2])     
+        plt.plot(self.history[  :  , 3])
+        plt.plot(self.history[  :  , 4])
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.title('Generative adversarial network')
