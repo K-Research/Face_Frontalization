@@ -5,7 +5,7 @@ from glob import glob
 import PIL.Image as pilimg
 
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, sideslist, frontslist, batch_size=32, dim = (128, 128), n_channels = 3, shuffle = True):
+    def __init__(self, sideslist, frontslist, batch_size = 32, dim = (128, 128), n_channels = 3, shuffle = True):
         self.dim = dim
         self.batch_size = batch_size
         self.sideslist = sideslist
@@ -18,7 +18,7 @@ class DataGenerator(keras.utils.Sequence):
         return int(np.floor(len(self.sideslist) / self.batch_size))
 
     def __getitem__(self, index):
-        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        indexes = self.indexes[index * self.batch_size : (index + 1) * self.batch_size]
 
         sideslist_temp = [self.sideslist[k] for k in indexes]
         frontslist_temp = [self.frontslist[k] for k in indexes]

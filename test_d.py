@@ -1,7 +1,5 @@
 from __future__ import print_function, division
 
-from datagenerator_read_dir_face import DataGenerator
-from glob import glob
 from keras.applications.vgg19 import VGG19
 import keras.backend as K
 from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D
@@ -21,11 +19,8 @@ np.random.seed(10)
 time = 1
 
 # Load data
-# X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
-# Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_y.npy') # Front face
-
-X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/X/*jpg')
-Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/Y/*jpg')
+X_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
+Y_train = np.load('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_y.npy') # Front face
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -39,21 +34,20 @@ save_interval = 1
 class DCGAN():
     def __init__(self):
         # Rescale -1 to 1
-        # self.X_train = X_train / 127.5 - 1.
-        # self.Y_train = Y_train / 127.5 - 1.
+        self.X_train = X_train / 127.5 - 1.
+        self.Y_train = Y_train / 127.5 - 1.
         # X_test = X_test / 127.5 - 1.
         # Y_test = Y_test / 127.5 - 1.
-        # Load dataset
-        self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
 
         # Prameters
-        self.height = 224
-        self.width = 224
-        self.channels = 3
+        self.height = X_train.shape[1]
+        self.width = X_train.shape[2]
+        self.channels = X_train.shape[3]
+        self.latent_dimension = self.width
 
         self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 
-        # self.batch = int(self.X_train.shape[0] / batch_size)
+        self.batch = int(self.X_train.shape[0] / batch_size)
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
@@ -172,18 +166,18 @@ class DCGAN():
         return model
 
     def build_discriminator(self):
-        senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+        vgg16_layer = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
-        senet50_layer.trainable = False
+        vgg16_layer.trainable = False
 
-        # senet50_layer.summary()
+        # vgg16_layer.summary()
         
-        senet50_layer = senet50_layer.get_layer('avg_pool').output
-        layer = Flatten()(senet50_layer)
+        vgg16_last_layer = vgg16_layer.get_layer('pool5').output
+        layer = Flatten()(vgg16_last_layer)
 
         discriminator_output = Dense(1, activation = 'sigmoid')(layer)
 
-        model = Model(inputs = senet50_layer.input, outputs = discriminator_output)
+        model = Model(inputs = vgg16_layer.input, outputs = discriminator_output)
 
         # model.summary()
 
@@ -197,13 +191,12 @@ class DCGAN():
         print('Training')
 
         for k in range(1, epochs + 1):
-            for l in tqdm(range(1, self.datagenerator.__len__ + 1)):
+            for l in tqdm(range(1, self.batch + 1)):
                 # Select a random half of images
-                # index = np.random.randint(0, self.X_train.shape[0], batch_size)
+                index = np.random.randint(0, self.X_train.shape[0], batch_size)
                 
-                # front_image = self.Y_train[index]
-                # side_image = self.X_train[index]
-                side_image, front_image = self.datagenerator.__getitem__(l)
+                front_image = self.Y_train[index]
+                side_image = self.X_train[index]
 
                 # Generate a batch of new images
                 generated_image = self.generator.predict(side_image)
@@ -248,8 +241,8 @@ class DCGAN():
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
 
-        # front_image = (127.5 * (front_image + 1)).astype(np.uint8)
-        # side_image = (127.5 * (side_image + 1)).astype(np.uint8)
+        front_image = (127.5 * (front_image + 1)).astype(np.uint8)
+        side_image = (127.5 * (side_image + 1)).astype(np.uint8)
 
         # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
         for m in range(batch_size):
@@ -261,15 +254,30 @@ class DCGAN():
             for n in range(self.n_show_image):
                 generated_image_plot = plt.subplot(1, 3, n + 1 + (2 * self.n_show_image))
                 generated_image_plot.set_title('Generated image (front image)')
-                plt.imshow(generated_image[m,  :  ,  :  ,  : ])
+
+                if self.channels == 1:
+                    plt.imshow(generated_image[m,  :  ,  :  , 0], cmap = 'gray')
+                
+                else:
+                    plt.imshow(generated_image[m,  :  ,  :  ,  : ])
 
                 original_front_face_image_plot = plt.subplot(1, 3, n + 1 + self.n_show_image)
                 original_front_face_image_plot.set_title('Origninal front image')
-                plt.imshow(front_image[m])
+
+                if self.channels == 1:
+                    plt.imshow(front_image[m].reshape(self.height, self.width), cmap = 'gray')
+                    
+                else:
+                    plt.imshow(front_image[m])
 
                 original_side_face_image_plot = plt.subplot(1, 3, n + 1)
                 original_side_face_image_plot.set_title('Origninal side image')
-                plt.imshow(side_image[m])
+
+                if self.channels == 1:
+                    plt.imshow(side_image[m].reshape(self.height, self.width), cmap = 'gray')
+                    
+                else:
+                    plt.imshow(side_image[m])
 
                 # Don't show axis of x and y
                 generated_image_plot.axis('off')

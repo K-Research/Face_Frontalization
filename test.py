@@ -6,6 +6,6 @@ import keras
 import unittest
 
 
-model = VGGFace(include_top = True, model = 'resnet50')
+model = VGGFace(include_top = True, model = 'senet50')
 
 model.summary()
