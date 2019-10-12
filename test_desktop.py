@@ -178,14 +178,14 @@ class DCGAN():
 
         # senet50_layer.summary()
         
-        senet50_layer = senet50_layer.get_layer('avg_pool').output
-        layer = Flatten()(senet50_layer)
+        senet50_last_layer = senet50_layer.get_layer('avg_pool').output
+        layer = Flatten()(senet50_last_layer)
 
         discriminator_output = Dense(1, activation = 'sigmoid')(layer)
 
         model = Model(inputs = senet50_layer.input, outputs = discriminator_output)
 
-        # model.summary()
+        model.summary()
 
         return model
 
@@ -197,7 +197,7 @@ class DCGAN():
         print('Training')
 
         for k in range(1, epochs + 1):
-            for l in tqdm(range(1, self.datagenerator.__len__ + 1)):
+            for l in tqdm(range(1, int(self.datagenerator.__len__) + 1)):
                 # Select a random half of images
                 # index = np.random.randint(0, self.X_train.shape[0], batch_size)
                 
