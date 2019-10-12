@@ -21,8 +21,8 @@ np.random.seed(10)
 time = 80
 
 # Load data
-X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/X/*jpg')
-Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/Y/*jpg')
+X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/X/*jpg')
+Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/Y/*jpg')
 
 train_epochs = 100
 batch_size = 32
@@ -32,7 +32,7 @@ class DCGAN():
     def __init__(self):
         # Load data
         self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
-        
+
         # Prameters
         self.height = 224
         self.width = 224
@@ -217,7 +217,7 @@ class DCGAN():
 
         for k in range(1, epochs + 1):
             for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
-                 # Select images
+                # Select images
                 side_image, front_image = self.datagenerator.__getitem__(l)
 
                 # Generate a batch of new images
@@ -242,9 +242,10 @@ class DCGAN():
                 record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
+                print(self.history)
+
                 # If at save interval -> save generated image samples
                 if l % save_interval == 0:
-                    save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = save_path)
 
             # Save .h5
@@ -309,9 +310,9 @@ class DCGAN():
             plt.close()
 
     def graph(self, history, save_path):
-        plt.plot(self.history[:, 2])     
-        plt.plot(self.history[:, 3])
-        plt.plot(self.history[:, 4])
+        plt.plot(self.history[  :  , 2])     
+        plt.plot(self.history[  :  , 3])
+        plt.plot(self.history[  :  , 4])
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.title('Generative adversarial network')
