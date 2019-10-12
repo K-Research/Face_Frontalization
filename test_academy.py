@@ -25,7 +25,7 @@ X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/Y/*jpg')
 
 train_epochs = 100
-batch_size = 32
+batch_size = 16
 save_interval = 1
 
 class DCGAN():
@@ -246,7 +246,7 @@ class DCGAN():
 
                 # If at save interval -> save generated image samples
                 if l % save_interval == 0:
-                    self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = save_path)
+                    self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
 
             # Save .h5
             if k % 5 == 0:
