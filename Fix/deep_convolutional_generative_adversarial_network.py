@@ -291,9 +291,9 @@ class DCGAN():
             plt.close()
 
     def graph(self, history, save_path):
-        plt.plot(self.history[:, 2])     
-        plt.plot(self.history[:, 3])
-        plt.plot(self.history[:, 4])
+        plt.plot(self.history[  :  , 2])     
+        plt.plot(self.history[  :  , 3])
+        plt.plot(self.history[  :  , 4])
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.title('Generative adversarial network')
