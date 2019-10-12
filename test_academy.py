@@ -1,11 +1,14 @@
 from __future__ import print_function, division
 
+from datagenerator_read_dir_face import DataGenerator
+from glob import glob
 from keras.applications.vgg19 import VGG19
 import keras.backend as K
-from keras.layers import Activation, add, BatchNormalization, Conv2D, Dense, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D, ZeroPadding2D
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
+from keras_vggface.vggface import VGGFace
 import math
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,16 +18,11 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 79
+time = 80
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_y.npy') # Front face
-
-# print(X_train.shape)
-# print(Y_train.shape)
-# print(X_test.shape)
-# print(Y_test.shape)
+X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/X/*jpg')
+Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean_224_224_3/Y/*jpg')
 
 train_epochs = 100
 batch_size = 32
@@ -32,17 +30,10 @@ save_interval = 1
 
 class DCGAN():
     def __init__(self):
-        # Rescale -1 to 1
-        self.X_train = X_train / 127.5 - 1.
-        self.Y_train = Y_train / 127.5 - 1.
-        # X_test = X_test / 127.5 - 1.
-        # Y_test = Y_test / 127.5 - 1.
-
         # Prameters
-        self.height = X_train.shape[1]
-        self.width = X_train.shape[2]
-        self.channels = X_train.shape[3]
-        self.latent_dimension = self.width
+        self.height = 224
+        self.width = 224
+        self.channels = 3
 
         self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 
@@ -224,13 +215,10 @@ class DCGAN():
         print('Training')
 
         for k in range(1, epochs + 1):
-            for l in tqdm(range(1, self.batch + 1)):
-                # Select a random half of images
-                index = np.random.randint(0, self.X_train.shape[0], batch_size)
+            for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
+                 # Select images
+                side_image, front_image = self.datagenerator.__getitem__(l)
 
-                front_image = self.Y_train[index]
-                side_image = self.X_train[index]
-               
                 # Generate a batch of new images
                 generated_image = self.generator.predict(side_image)
 
@@ -288,30 +276,15 @@ class DCGAN():
             for n in range(self.n_show_image):
                 generated_image_plot = plt.subplot(1, 3, n + 1 + (2 * self.n_show_image))
                 generated_image_plot.set_title('Generated image (front image)')
-
-                if self.channels == 1:
-                    plt.imshow(generated_image[m,  :  ,  :  , 0], cmap = 'gray')
-                
-                else:
-                    plt.imshow(generated_image[m,  :  ,  :  ,  : ])
+                plt.imshow(generated_image[m,  :  ,  :  ,  : ])
 
                 original_front_face_image_plot = plt.subplot(1, 3, n + 1 + self.n_show_image)
                 original_front_face_image_plot.set_title('Origninal front image')
-
-                if self.channels == 1:
-                    plt.imshow(front_image[m].reshape(self.height, self.width), cmap = 'gray')
-                    
-                else:
-                    plt.imshow(front_image[m])
+                plt.imshow(front_image[m])
 
                 original_side_face_image_plot = plt.subplot(1, 3, n + 1)
                 original_side_face_image_plot.set_title('Origninal side image')
-
-                if self.channels == 1:
-                    plt.imshow(side_image[m].reshape(self.height, self.width), cmap = 'gray')
-                    
-                else:
-                    plt.imshow(side_image[m])
+                plt.imshow(side_image[m])
 
                 # Don't show axis of x and y
                 generated_image_plot.axis('off')
