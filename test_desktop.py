@@ -83,7 +83,7 @@ class DCGAN():
 
         # senet50_layer.summary()
         
-        senet50_last_layer = senet50_layer.get_layer('activation_162').output
+        senet50_last_layer = senet50_layer.get_layer('activation_81').output
 
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(senet50_last_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
