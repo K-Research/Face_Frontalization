@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 83
+time = 84
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -81,7 +81,12 @@ class DCGAN():
     def build_generator(self):
         senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
+        senet50_layer.trainable = False
+
+        # senet50_layer.summary()
+        
         senet50_last_layer = senet50_layer.get_layer('activation_81').output
+        
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(senet50_last_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
