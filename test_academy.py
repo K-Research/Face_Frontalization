@@ -4,7 +4,7 @@ from datagenerator_read_dir_face import DataGenerator
 from glob import glob
 from keras.applications.vgg19 import VGG19
 import keras.backend as K
-from keras.layers import BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, ZeroPadding2D
+from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
@@ -73,7 +73,7 @@ class DCGAN():
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, [image, valid])
+        self.combined = Model(z, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
@@ -109,7 +109,7 @@ class DCGAN():
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (5, 5), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (5, 5), strides = (1, 1), padding = 'valid')(generator_layer)
 
         generator_output = Activation('tanh')(generator_layer)
 
@@ -122,7 +122,7 @@ class DCGAN():
     def build_discriminator(self):
         model = Sequential()
 
-        model.add(Conv2D(32, kernel_size = (3, 3), strides = (2, 2), input_shape = (224, 224, 3), padding = 'same'))
+        model.add(Conv2D(32, kernel_size = (3, 3), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
         model.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
@@ -191,13 +191,13 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
+                generator_loss = self.combined.train_on_batch(side_image, real)
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
-                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
