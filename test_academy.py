@@ -2,7 +2,6 @@ from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
-import keras.backend as K
 from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, Sequential
