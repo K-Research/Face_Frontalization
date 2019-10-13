@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 85
+time = 86
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -42,6 +42,9 @@ class DCGAN():
         self.number = 1
         self.save_path = 'D:/Generated Image/Training' + str(time) + '/'
 
+        # Build and the generator
+        self.senet50 = self.build_senet50()
+
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
         self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
@@ -60,32 +63,45 @@ class DCGAN():
             json_file.write(generator_model_json)
 
         # The generator takes side images as input and generates images
-        z = Input(shape = (self.height, self.width, self.channels))
-        image = self.generator(z)
+        image = Input(shape = (self.height, self.width, self.channels))
+        z = self.senet50(image)
+        generated_image = self.generator(z)
 
         # For the combined model we will only train the generator
         self.discriminator.trainable = False
 
         # The discriminator takes generated images as input and determines validity
-        valid = self.discriminator(image)
+        z_2 = self.senet50(generated_image)
+        valid = self.discriminator(z_2)
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, valid)
+        self.combined = Model(generated_image, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
 
-    def build_generator(self):
+    def build_senet50(self):
         senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
         senet50_layer.trainable = False
 
         # senet50_layer.summary()
-        
-        senet50_last_layer = senet50_layer.get_layer('activation_81').output
 
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(senet50_last_layer)
+        senet50_last_layer = senet50_layer.get_layer('add_16').output
+
+        senet50_output = LeakyReLU(alpha = 0.2)(senet50_last_layer)
+
+        senet50 = Model(inputs = senet50_layer.input, outputs = senet50_output)
+
+        # senet50.summary()
+
+        return senet50
+
+    def build_generator(self):
+        generator_input = Input(shape = (7, 7, 2048))
+
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
@@ -113,56 +129,18 @@ class DCGAN():
 
         generator_output = Activation('tanh')(generator_layer)
 
-        generator = Model(inputs = senet50_layer.input, outputs = generator_output)
+        generator = Model(inputs = generator_input, outputs = generator_output)
 
         # generator.summary()
 
         return generator
 
     def build_discriminator(self):
-        model = Sequential()
+        discriminator_input = Input(shape = (7, 7, 2048))
 
-        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Flatten())
-        model.add(Dense(units = 1, activation = 'sigmoid'))
+        discriminator_output = Dense(units = 1, activation = 'sigmoid')(discriminator_input)
 
-        # model.summary()
-
-        image = Input(shape = (self.height, self.width, self.channels))
-        validity = model(image)
-
-        discriminator = Model(inputs = image, outputs = validity)
+        discriminator = Model(inputs = discriminator_input, outputs = discriminator_output)
 
         return discriminator
 

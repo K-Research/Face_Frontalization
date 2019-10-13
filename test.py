@@ -18,13 +18,12 @@ from tqdm import tqdm
 
 senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (224, 224, 3))
 
-senet50_layer.summary()
+senet50_layer.trainable = False
+
+# senet50_layer.summary()
 
 senet50_last_layer = senet50_layer.get_layer('activation_81').output
 
-discriminator_layer = Conv2D(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(senet50_last_layer)
-discriminator_layer = Conv2D(filters = 256, kernel_size = (2, 2), strides = (1, 1), padding = 'valid')(discriminator_layer)
+model = Model(inputs = senet50_layer.input, outputs = senet50_last_layer)
 
-discriminator = Model(inputs = senet50_layer.input, outputs = discriminator_layer)
-
-discriminator.summary()
+model.summary()
