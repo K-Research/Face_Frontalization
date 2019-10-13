@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 85
+time = 86
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
