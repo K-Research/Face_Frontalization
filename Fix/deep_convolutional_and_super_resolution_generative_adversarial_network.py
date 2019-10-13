@@ -140,44 +140,44 @@ class DCGAN():
         generator_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(generator_layer)
         generator_output = Activation('tanh')(generator_layer)
 
-        model = Model(inputs = generator_input, outputs = generator_output)
+        generator = Model(inputs = generator_input, outputs = generator_output)
+
+        # generator.summary()
+
+        return generator
+
+    def build_discriminator(self):
+        model = Sequential()
+
+        model.add(Conv2D(32, kernel_size = (3, 3), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(128, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Flatten())
+        model.add(Dense(1, activation = 'sigmoid'))
 
         # model.summary()
 
-        return model
+        generated_image = Input(shape = (self.height, self.width, self.channels))
+        validity = model(generated_image)
 
-    def build_discriminator(self):
-        discriminator = Sequential()
-
-        discriminator.add(Conv2D(32, kernel_size = (3, 3), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Dropout(0.25))
-        discriminator.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Dropout(0.25))
-        discriminator.add(Conv2D(128, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Dropout(0.25))
-        discriminator.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Dropout(0.25))
-        discriminator.add(Flatten())
-        discriminator.add(Dense(1, activation = 'sigmoid'))
+        discriminator = Model(generated_image, validity)
 
         # discriminator.summary()
 
-        generated_image = Input(shape = (self.height, self.width, self.channels))
-        validity = discriminator(generated_image)
-
-        model = Model(generated_image, validity)
-
-        # model.summary()
-
-        return model
+        return discriminator
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths

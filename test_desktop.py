@@ -150,11 +150,11 @@ class DCGAN():
         generator_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(generator_layer)
         generator_output = Activation('tanh')(generator_layer)
 
-        model = Model(inputs = generator_input, outputs = generator_output)
+        generator = Model(inputs = generator_input, outputs = generator_output)
 
-        # model.summary()
+        # generator.summary()
 
-        return model
+        return generator
 
     def build_discriminator(self):
         senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
@@ -168,11 +168,11 @@ class DCGAN():
 
         discriminator_output = Dense(1, activation = 'sigmoid')(layer)
 
-        model = Model(inputs = senet50_layer.input, outputs = discriminator_output)
+        discriminator = Model(inputs = senet50_layer.input, outputs = discriminator_output)
 
-        # model.summary()
+        # discriminator.summary()
 
-        return model
+        return discriminator
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
