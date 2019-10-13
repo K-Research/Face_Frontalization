@@ -160,7 +160,7 @@ class DCGAN():
 
         generator = Model(inputs = generator_input, outputs = generator_output)
 
-        # model.summary()
+        # generator.summary()
 
         return generator
 

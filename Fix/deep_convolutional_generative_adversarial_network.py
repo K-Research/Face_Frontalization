@@ -85,32 +85,7 @@ class DCGAN():
         self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
-
-    def residual_block(self, layer, filters, kernel_size, strides):
-        generator = layer
-
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(generator)
-        layer = BatchNormalization(momentum = 0.5)(layer)
-
-        # Using Parametric ReLU
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'same')(layer)
-        output = BatchNormalization(momentum = 0.5)(layer)
-
-        model = add([generator, output])
-
-        return model
-
-    def up_sampling_block(self, layer, filters, kernel_size, strides):
-        # In place of Conv2D and UpSampling2D we can also use Conv2DTranspose (Both are used for Deconvolution)
-        # Even we can have our own function for deconvolution (i.e one made in Utils.py)
-        # layer = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = 'same)(layer)
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(layer)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = LeakyReLU(alpha = 0.2)(layer)
-
-        return layer
-    
+   
     def build_generator(self):
         model = Sequential()
 
