@@ -152,7 +152,7 @@ class DCGAN():
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
         model.add(Flatten())
-        model.add(Dense(unists = 1, activation = 'sigmoid'))
+        model.add(Dense(units = 1, activation = 'sigmoid'))
 
         # model.summary()
 
