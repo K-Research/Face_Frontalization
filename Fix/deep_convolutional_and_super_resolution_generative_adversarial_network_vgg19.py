@@ -57,7 +57,7 @@ class DCGAN():
         self.discriminator = self.build_discriminator()
         self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
 
-        # Build and compile the generator
+        # Build the generator
         self.generator = self.build_generator()
         self.generator.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
 
@@ -71,7 +71,7 @@ class DCGAN():
         with open(self.save_path + 'Json/generator_model.json', "w") as json_file : 
             json_file.write(generator_model_json)
 
-        # The generator takes noise as input and generates imgs
+        # The generator takes side images as input and generates images
         z = Input(shape = (self.height, self.width, self.channels))
         image = self.generator(z)
 
