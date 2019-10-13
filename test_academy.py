@@ -2,7 +2,6 @@ from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
-from keras.applications.vgg19 import VGG19
 import keras.backend as K
 from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU
@@ -86,7 +85,7 @@ class DCGAN():
         # senet50_layer.summary()
         
         senet50_last_layer = senet50_layer.get_layer('activation_81').output
-        
+
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(senet50_last_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
