@@ -2,7 +2,7 @@ from __future__ import print_function, division
 
 from keras.applications.vgg19 import VGG19
 import keras.backend as K
-from keras.layers import Activation, add, BatchNormalization, Conv2D, Dense, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Dense, Flatten, Input, MaxPooling2D, UpSampling2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
@@ -158,53 +158,53 @@ class DCGAN():
         generator_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(generator_layer)
         generator_output = Activation('tanh')(generator_layer)
 
-        model = Model(inputs = generator_input, outputs = generator_output)
+        generator = Model(inputs = generator_input, outputs = generator_output)
 
         # model.summary()
 
-        return model
+        return generator
 
     def build_discriminator(self):
-        discriminator = Sequential()
+        model = Sequential()
 
-        discriminator.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(128, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(512, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Conv2D(512, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
-        discriminator.add(BatchNormalization(momentum = 0.8))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Flatten())
-        discriminator.add(Dense(1024))
-        discriminator.add(LeakyReLU(alpha = 0.2))
-        discriminator.add(Dense(1, activation = 'sigmoid'))
+        model.add(Conv2D(64, kernel_size = (3, 3), strides = (1, 1), input_shape = (self.height, self.width, self.channels), padding = 'same'))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(64, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(128, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(128, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(256, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(512, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(512, kernel_size = (3, 3), strides = (1, 1), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Flatten())
+        model.add(Dense(1024))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dense(1, activation = 'sigmoid'))
+
+        # model.summary()
+
+        generated_image = Input(shape = (self.height, self.width, self.channels))
+        validity = model(generated_image)
+
+        discriminator = Model(generated_image, validity)
 
         # discriminator.summary()
 
-        generated_image = Input(shape = (self.height, self.width, self.channels))
-        validity = discriminator(generated_image)
-
-        model = Model(generated_image, validity)
-
-        # model.summary()
-
-        return model
+        return discriminator
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
