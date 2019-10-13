@@ -112,7 +112,7 @@ class DCGAN():
 
         generator = Model(inputs = senet50_layer.input, outputs = generator_output)
 
-        generator.summary()
+        # generator.summary()
 
         return generator
 
