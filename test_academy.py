@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 82
+time = 83
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -81,41 +81,38 @@ class DCGAN():
     def build_generator(self):
         senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
-        senet50_last_layer = senet50_layer.get_layer('avg_pool').output
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(senet50_last_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        senet50_last_layer = senet50_layer.get_layer('activation_81').output
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(senet50_last_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (5, 5), strides = (1, 1), padding = 'valid')(generator_layer)
+        # generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        # generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        # generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (1, 1), strides = (1, 1), padding = 'valid')(generator_layer)
 
         generator_output = Activation('tanh')(generator_layer)
 
         generator = Model(inputs = senet50_layer.input, outputs = generator_output)
 
-        # generator.summary()        
+        # generator.summary()
 
         return generator
 
@@ -138,7 +135,7 @@ class DCGAN():
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
@@ -146,11 +143,11 @@ class DCGAN():
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(512, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(512, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
