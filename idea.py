@@ -47,10 +47,23 @@ class DCGAN():
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
+        # self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
+
+        image_1 = Input(shape = (self.height, self.width, self.channels))
+        z_1 = self.senet50(image_1)
+        valid_1 = self.discriminator(z_1)
+
+        self.discriminator_senet_combine = Model(inputs = image_1, outputs = valid_1)
+        self.discriminator_senet_combine.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
 
         # Build and compile the generator
         self.generator = self.build_generator()
+
+        image_2 = image_1 = Input(shape = (self.height, self.width, self.channels))
+        z_2 = self.senet50(image_2)
+        generated_image = self.generator(z_2)
+
+        self.generator_senet_combine = Model(inputs = image_2, outputs = generated_image)
 
         # Save .json
         generator_model_json = self.generator.to_json()
@@ -63,20 +76,19 @@ class DCGAN():
             json_file.write(generator_model_json)
 
         # The generator takes side images as input and generates images
-        image = Input(shape = (self.height, self.width, self.channels))
-        z = self.senet50(image)
-        generated_image = self.generator(z)
+        z = Input(shape = (self.height, self.width, self.channels))
+        image = self.generator_senet_combine(z)
 
         # For the combined model we will only train the generator
         self.discriminator.trainable = False
 
         # The discriminator takes generated images as input and determines validity
-        z_2 = self.senet50(generated_image)
-        valid = self.discriminator(z_2)
+        valid = self.discriminator_senet_combine(image)
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(generated_image, valid)
+        # self.combined = Model(generated_image, valid)
+        self.combined = Model(image, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
