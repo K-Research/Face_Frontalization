@@ -81,7 +81,12 @@ class DCGAN():
     def build_generator(self):
         senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
-        senet50_last_layer = senet50_layer.get_layer('activation_81').output
+        senet50_layer.trainable = False
+
+        # senet50_layer.summary()
+        
+        senet50_last_layer = senet50_layer.get_layer('activation_162').output
+
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(senet50_last_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
@@ -121,11 +126,12 @@ class DCGAN():
         # senet50_layer.summary()
         
         senet50_last_layer = senet50_layer.get_layer('activation_81').output
+
         discriminator_layer = Flatten()(senet50_last_layer)
 
         discriminator_output = Dense(1, activation = 'sigmoid')(discriminator_layer)
 
-        discriminator = Model(inputs = senet50_last_layer.input, outputs = discriminator_output)
+        discriminator = Model(inputs = senet50_layer.input, outputs = discriminator_output)
 
         # discriminator.summary()
 
