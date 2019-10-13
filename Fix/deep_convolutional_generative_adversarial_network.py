@@ -175,18 +175,17 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
+                generator_loss = self.combined.train_on_batch(side_image, real)
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
-                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
                 if l % save_interval == 0:
-                    save_path = 'D:/Generated Image/Training' + str(time) + '/'
                     self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
 
             # Save .h5
