@@ -15,13 +15,13 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 88
+time = 90
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
-train_epochs = 100
+train_epochs = 10000
 batch_size = 16
 save_interval = 1
 
@@ -37,10 +37,14 @@ class DCGAN():
 
         self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 
+        self.senet50_output_shape = (8631, )
+
         self.n_show_image = 1 # Number of images to show
         self.history = []
         self.number = 1
         self.save_path = 'D:/Generated Image/Training' + str(time) + '/'
+
+        self.senet50 = self.build_senet50()
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -60,57 +64,62 @@ class DCGAN():
             json_file.write(generator_model_json)
 
         # The generator takes side images as input and generates images
-        z = Input(shape = (self.height, self.width, self.channels))
-        image = self.generator(z)
+        side_image = Input(shape = (self.height, self.width, self.channels))
+        z = self.senet50(side_image)
+        generated_image = self.generator(z)
 
         # For the combined model we will only train the generator
         self.discriminator.trainable = False
 
         # The discriminator takes generated images as input and determines validity
-        valid = self.discriminator(image)
+        valid = self.discriminator(generated_image)
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, valid)
+        self.combined = Model(side_image, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
 
+    def build_senet50(self):
+        senet50 = VGGFace(include_top = True, model = 'senet50', weights = 'vggface')
+
+        senet50.trainable = False
+
+        # senet50.summary()
+
+        return senet50
+
     def build_generator(self):
-        senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+        generator_input = Input(shape = self.senet50_output_shape)
 
-        senet50_layer.trainable = False
-
-        # senet50_layer.summary()
-        
-        senet50_last_layer = senet50_layer.get_layer('activation_81').output
-
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(senet50_last_layer)
+        generator_layer = Reshape((3, 7, 411))(generator_input)
+        generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (5, 5), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'valid')(generator_layer)
 
         generator_output = Activation('tanh')(generator_layer)
 
-        generator = Model(inputs = senet50_layer.input, outputs = generator_output)
+        generator = Model(inputs = generator_input, outputs = generator_output)
 
         # generator.summary()
 
@@ -161,6 +170,8 @@ class DCGAN():
 
         discriminator = Model(inputs = image, outputs = validity)
 
+        # discriminator.summary()
+
         return discriminator
 
     def train(self, epochs, batch_size, save_interval):
@@ -176,7 +187,8 @@ class DCGAN():
                 side_image, front_image = self.datagenerator.__getitem__(l)
 
                 # Generate a batch of new images
-                generated_image = self.generator.predict(side_image)
+                latent_vector = self.senet50.predict(side_image)
+                generated_image = self.generator.predict(latent_vector)
 
                 self.discriminator.trainable = True
 
@@ -198,8 +210,8 @@ class DCGAN():
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
-                if l % save_interval == 0:
-                    self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
+                # if l % save_interval == 0:
+                #     self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
 
             # Save .h5
             if k % 5 == 0:
@@ -209,14 +221,19 @@ class DCGAN():
 
                 self.generator.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % k)
                 self.generator.save_weights(self.save_path + 'H5/' + 'generator_weights_epoch_%d.h5' % k)
+            
+            if k % 100 == 0:
+                self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
 
         self.history = np.array(self.history)
 
         self.graph(history = self.history, save_path = self.save_path + 'History/')
 
     def save_image(self, front_image, side_image, train_number, epoch_number, save_path):
+        latent_vector = self.senet50.predict(side_image)
+
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+        generated_image = 0.5 * self.generator.predict(latent_vector) + 0.5
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
