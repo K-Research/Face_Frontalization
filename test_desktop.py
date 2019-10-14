@@ -2,7 +2,7 @@ from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
-from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, ZeroPadding2D
+from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
@@ -42,6 +42,8 @@ class DCGAN():
         self.number = 1
         self.save_path = 'D:/Generated Image/Training' + str(time) + '/'
 
+        self.senet50 = self.build_senet50()
+
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
         self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
@@ -76,24 +78,24 @@ class DCGAN():
 
         # self.combined.summary()
 
-    def senet50(self):
-        senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+    def build_senet50(self):
+        senet50 = VGGFace(include_top = True, model = 'senet50', weights = 'vggface')
 
-        senet50_layer.trainable = False
+        senet50.trainable = False
 
-        # senet50_layer.summary()
+        # senet50.summary()
 
-        return senet50_layer
+        return senet50
 
     def build_generator(self):
-        senet50_layer = self.senet50()
+        generator_input = Input(shape = (8631, ))
 
-        senet50_last_layer = senet50_layer.get_layer('activation_162').output
 
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(senet50_last_layer)
+        generator_layer = Reshape((3, 7, 411))
+        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
@@ -105,17 +107,17 @@ class DCGAN():
         generator_layer = Conv2DTranspose(filters = 32, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 16, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 16, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 8, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (5, 5), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'valid')(generator_layer)
 
         generator_output = Activation('tanh')(generator_layer)
 
-        generator = Model(inputs = senet50_layer.input, outputs = generator_output)
+        generator = Model(inputs = generator_input, outputs = generator_output)
 
         # generator.summary()
 
@@ -147,7 +149,8 @@ class DCGAN():
                 side_image, front_image = self.datagenerator.__getitem__(l)
 
                 # Generate a batch of new images
-                generated_image = self.generator.predict(side_image)
+                latent_vector = self.senet50.predict(side_image)
+                generated_image = self.generator.predict(latent_vector)
 
                 self.discriminator.trainable = True
 
@@ -186,8 +189,10 @@ class DCGAN():
         self.graph(history = self.history, save_path = self.save_path + 'History/')
 
     def save_image(self, front_image, side_image, train_number, epoch_number, save_path):
+        latent_vector = self.senet50.predict(side_image)
+        
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+        generated_image = 0.5 * self.generator.predict(latent_vector) + 0.5
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)

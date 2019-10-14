@@ -16,14 +16,33 @@ import os
 import sys
 from tqdm import tqdm
 
-senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (224, 224, 3))
+generator_input = Input(shape = (8631, )) # 8631
 
-senet50_layer.trainable = False
+# generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_input)
+# generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+# generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+# generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_layer)
+# generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+# generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+# generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+# generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+# generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+# generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+# generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+# generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+# generator_layer = Conv2DTranspose(filters = 32, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+# generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+# generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+# generator_layer = Conv2DTranspose(filters = 16, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+# generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+# generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+# generator_layer = Conv2DTranspose(filters = 8, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+# generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+# generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+# generator_layer = Conv2DTranspose(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'valid')(generator_layer)
 
-# senet50_layer.summary()
+generator_output = Activation('tanh')(generator_input)
 
-senet50_last_layer = senet50_layer.get_layer('activation_81').output
+generator = Model(inputs = generator_input, outputs = generator_output)
 
-model = Model(inputs = senet50_layer.input, outputs = senet50_last_layer)
-
-model.summary()
+generator.summary()
