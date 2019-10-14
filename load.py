@@ -4,13 +4,32 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy
 from keras.preprocessing.image import load_img, img_to_array
+from keras.optimizers import Adam
+from keras.applications.vgg19 import VGG19
+import keras.backend as K
 # AI Model
+class VGG_LOSS(object):
+    def __init__(self, image_shape):
+        self.image_shape = image_shape
+    def vgg19_loss(self, true, prediction):
+        vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (self.image_shape))
+        # Make trainable as False
+
+        vgg19.trainable = False
+
+        for layer in vgg19.layers:
+            layer.trainable = False
+        
+        model = Model(inputs = vgg19.input, outputs = vgg19.get_layer('block5_conv4').output)
+        model.trainable = False
+
+        return K.mean(K.square(model(true) - model(prediction)))
 
 # config = tf.ConfigProto()
 # config.gpu_options.allow_growth = True
 # sess = tf.Session(config=config)
-
-image = cv2.imread('G:/001-02-04.jpg')
+loss = VGG_LOSS(image_shape=(128, 128, 3))
+image = cv2.imread('G:/001-2-09.jpg')
 
 print(image.shape)
 
@@ -26,18 +45,15 @@ images = numpy.array(images)
 
 print(images.shape)
 
-json_file=open("G:/generator_model.json","r")
-loaded_json=json_file.read()
-json_file.close()
+opt = Adam(lr = 0.0002, beta_1 = 0.5)
 
-model=model_from_json(loaded_json)
-model.load_weights("G:/generator_weights_epoch_15.h5")
-MODEL=model
+model = load_model('G:/generator_epoch_15.h5', custom_objects = {'vgg19_loss' : loss.vgg19_loss})
 
-# model = load_model('G:/generator_epoch_15.h5')
+model.summary()
 
-# MODEL.summary()
-generated_image = 0.5 * MODEL.predict(images) + 0.5
+generated_image = 0.5 * model.predict(images) + 0.5
+
+print(generated_image)
 
 plt.imshow(generated_image[0])
 plt.show()
