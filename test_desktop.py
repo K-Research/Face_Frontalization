@@ -37,6 +37,8 @@ class DCGAN():
 
         self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
 
+        self.senet50_output_shape = (8631, )
+
         self.n_show_image = 1 # Number of images to show
         self.history = []
         self.number = 1
@@ -62,18 +64,19 @@ class DCGAN():
             json_file.write(generator_model_json)
 
         # The generator takes side images as input and generates images
-        z = Input(shape = (self.height, self.width, self.channels))
-        image = self.generator(z)
+        side_image = Input(shape = (self.height, self.width, self.channels))
+        z = self.senet50(side_image)
+        generated_image = self.generator(z)
 
         # For the combined model we will only train the generator
         self.discriminator.trainable = False
 
         # The discriminator takes generated images as input and determines validity
-        valid = self.discriminator(image)
+        valid = self.discriminator(generated_image)
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, valid)
+        self.combined = Model(side_image, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
@@ -88,32 +91,31 @@ class DCGAN():
         return senet50
 
     def build_generator(self):
-        generator_input = Input(shape = (8631, ))
+        generator_input = Input(shape = self.senet50_output_shape)
 
-
-        generator_layer = Reshape((3, 7, 411))
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_input)
+        generator_layer = Reshape((3, 7, 411))(generator_input)
+        generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 32, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 16, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 8, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 3, kernel_size = (3, 3), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'valid')(generator_layer)
 
         generator_output = Activation('tanh')(generator_layer)
 
@@ -124,15 +126,51 @@ class DCGAN():
         return generator
 
     def build_discriminator(self):
-        senet50_layer = self.senet50()
+        model = Sequential()
 
-        senet50_last_layer = senet50_layer.get_layer('activation_81').output
+        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Flatten())
+        model.add(Dense(units = 1, activation = 'sigmoid'))
 
-        discriminator_layer = Flatten()(senet50_last_layer)
+        # model.summary()
 
-        discriminator_output = Dense(units = 1, activation = 'sigmoid')(discriminator_layer)
+        image = Input(shape = (self.height, self.width, self.channels))
+        validity = model(image)
 
-        discriminator = Model(inputs = senet50_layer.input, outputs = discriminator_output)
+        discriminator = Model(inputs = image, outputs = validity)
+
+        # discriminator.summary()
 
         return discriminator
 
@@ -190,7 +228,7 @@ class DCGAN():
 
     def save_image(self, front_image, side_image, train_number, epoch_number, save_path):
         latent_vector = self.senet50.predict(side_image)
-        
+
         # Rescale images 0 - 1
         generated_image = 0.5 * self.generator.predict(latent_vector) + 0.5
 
