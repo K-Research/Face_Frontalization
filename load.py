@@ -45,15 +45,23 @@ images = numpy.array(images)
 
 print(images.shape)
 
-opt = Adam(lr = 0.0002, beta_1 = 0.5)
+images = (images.astype(numpy.float32) - 127.5) / 127.5
 
 model = load_model('G:/generator_epoch_15.h5', custom_objects = {'vgg19_loss' : loss.vgg19_loss})
 
 model.summary()
 
-generated_image = 0.5 * model.predict(images) + 0.5
+generated_image = model.predict(images)
+
+pred = (generated_image +1) * 127.5
+
+pred = pred.astype(numpy.uint8)
 
 print(generated_image)
 
-plt.imshow(generated_image[0])
+b, g, r = cv2.split(pred[0])
+
+pred_image = cv2.merge([r, g, b])
+
+plt.imshow(pred_image)
 plt.show()
