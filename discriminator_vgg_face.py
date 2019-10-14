@@ -1,5 +1,7 @@
 from __future__ import print_function, division
 
+from datagenerator_read_dir_face import DataGenerator
+from glob import glob
 from keras.applications.vgg19 import VGG19
 import keras.backend as K
 from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D
@@ -16,11 +18,11 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 76
+time = 90
 
 # Load data
-X_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_x.npy') # Side face
-Y_train = np.load('D:/Bitcamp/Project/Frontalization/Imagenius/Numpy/korean_lux_y.npy') # Front face
+X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
+Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 # print(X_train.shape)
 # print(Y_train.shape)
@@ -33,25 +35,20 @@ save_interval = 1
 
 class DCGAN():
     def __init__(self):
-        # Rescale -1 to 1
-        self.X_train = X_train / 127.5 - 1.
-        self.Y_train = Y_train / 127.5 - 1.
-        # X_test = X_test / 127.5 - 1.
-        # Y_test = Y_test / 127.5 - 1.
+        # Load data
+        self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
 
         # Prameters
-        self.height = X_train.shape[1]
-        self.width = X_train.shape[2]
-        self.channels = X_train.shape[3]
-        self.latent_dimension = self.width
+        self.height = 224
+        self.width = 224
+        self.channels = 3
 
         self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
-
-        self.batch = int(self.X_train.shape[0] / batch_size)
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
         self.number = 1
+        self.save_path = 'D:/Generated Image/Training' + str(time) + '/'
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -60,6 +57,16 @@ class DCGAN():
         # Build and compile the generator
         self.generator = self.build_generator()
         self.generator.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
+
+        # Save .json
+        generator_model_json = self.generator.to_json()
+
+        # Check folder presence
+        if not os.path.isdir(self.save_path + 'Json/'):
+            os.makedirs(self.save_path + 'Json/')
+
+        with open(self.save_path + 'Json/generator_model.json', "w") as json_file : 
+            json_file.write(generator_model_json)
 
         # The generator takes noise as input and generates imgs
         z = Input(shape = (self.height, self.width, self.channels))
@@ -143,7 +150,7 @@ class DCGAN():
 
         # Using 2 UpSampling Blocks
         for j in range(3):
-            generator_layer = self.up_sampling_block(layer = generator_layer, filters = 256, kernel_size = 3, strides = 1)
+            generator_layer = self.up_sampling_block(layer = generator_layer, filters = 64, kernel_size = 3, strides = 1)
 
         generator_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(generator_layer)
         generator_output = Activation('tanh')(generator_layer)
@@ -180,13 +187,9 @@ class DCGAN():
         print('Training')
 
         for k in range(1, epochs + 1):
-            for l in tqdm(range(1, self.batch + 1)):
-                # Select a random half of images
-                index = np.random.randint(0, self.X_train.shape[0], batch_size)
-                front_image = self.Y_train[index]
-
-                # Generate a batch of new images
-                side_image = self.X_train[index]
+            for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
+                # Select images
+                side_image, front_image = self.datagenerator.__getitem__(l)
 
                 # optimizer.zero_grad()
                 
@@ -211,17 +214,16 @@ class DCGAN():
                 record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
-                # If at save interval -> save generated image samples
-                if l % save_interval == 0:
-                    save_path = 'D:/Generated Image/Training' + str(time) + '/'
-                    self.save_image(front_image = front_image, number = k, side_image = side_image, save_path = save_path)
+            # If at save interval -> save generated image samples
+            if k == 10:
+                self.save_image(front_image = front_image, number = k, side_image = side_image, save_path = self.save_path)
 
-            if k == 1000:
-                self.generator.to_json()
-
-            if k % 1000 == 0:
-                self.generator.save(save_path + 'generator_epoch_%d.h5' % k)
-                self.generator.save_weights(save_path + 'generator_weights_epoch_%d.h5' % k)
+            if k % 10 == 0:
+                # Check folder presence
+                if not os.path.isdir(self.save_path + 'H5/'):
+                    os.makedirs(self.save_path + 'H5/')
+                self.generator.save(self.save_path + 'generator_epoch_%d.h5' % k)
+                self.generator.save_weights(self.save_path + 'generator_weights_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
