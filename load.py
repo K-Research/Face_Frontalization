@@ -31,8 +31,11 @@ loaded_json=json_file.read()
 json_file.close()
 
 model=model_from_json(loaded_json)
-model.load_weights("G:/generator_weights_epoch_5.h5")
+model.load_weights("G:/generator_weights_epoch_15.h5")
 MODEL=model
+
+# model = load_model('G:/generator_epoch_15.h5')
+
 # MODEL.summary()
 generated_image = 0.5 * MODEL.predict(images) + 0.5
 
