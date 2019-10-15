@@ -81,7 +81,7 @@ class DCGAN():
 
         # self.combined.summary()
 
-   def build_vgg16(self):
+    def build_vgg16(self):
         vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
         # Make trainable as False
 
