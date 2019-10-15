@@ -1,260 +1,212 @@
-from __future__ import print_function, division
-
-from datagenerator_read_dir_face import DataGenerator
-from glob import glob
-from keras.applications.vgg19 import VGG19
-import keras.backend as K
-from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, UpSampling2D, ZeroPadding2D
-from keras.layers.advanced_activations import LeakyReLU, PReLU 
-from keras.models import Model, Sequential
+from keras_vggface.vggface import VGGFace
+from keras_vggface.utils import preprocess_input
+from keras.engine import Model
+from keras.layers import Flatten, Dense, Input, Conv2D, Conv2DTranspose, BatchNormalization, LeakyReLU, ReLU
 from keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import sys
-from tqdm import tqdm
+from datagenerator_read_dir_face import DataGenerator
+from glob import glob
+from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 
-np.random.seed(10)
+height = 224
+width = 224
+channels = 3
+z_dimension = 512
+batch_size = 1
+epochs = 1000
+line = 101
+n_show_image = 1
+nb_class = 2
+hidden_dim = 512
+vgg = VGGFace(include_top=False, model="vgg16", input_shape=(224, 224, 3), weights= 'vggface')
+vgg.trainable = False
+vgg.summary()
+optimizerD = Adam(lr = 0.00002, beta_1 = 0.5, beta_2 = 0.999)
+optimizerC = Adam(lr = 0.002, beta_1 = 0.5, beta_2 = 0.999)
+number = 0
 
-time = 90
 
-# Load data
-X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
-Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
+X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
+Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
-train_epochs = 1000
-batch_size = 16
-save_interval = 1
+# X = np.load("./swh/npy/X.npy")
+# Y = np.load("./swh/npy/Y.npy")
 
-class DCGAN():
+# X = X / 127.5 - 1
+# Y = Y / 127.5 - 1
+
+class model_1():
+
     def __init__(self):
-       # Load data
-        self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
-
-        # Prameters
-        self.height = 224
-        self.width = 224
-        self.channels = 3
-
-        self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
-
-        self.n_show_image = 1 # Number of images to show
+        self.height = height
+        self.width = width
+        self.channels = channels
+        self.z_dimension = z_dimension
+        self.batch_size = batch_size
+        self.epochs = epochs
+        self.line = line
+        self.n_show_image = n_show_image
+        self.vgg = vgg
+        self.optimizerD = optimizerD
+        self.optimizerC = optimizerC
+        self.DG = DataGenerator(X_train, Y_train, batch_size = batch_size)
+        self.number = number
         self.history = []
-        self.number = 1
-        self.save_path = 'D:/Generated Image/Training' + str(time) + '/'
 
-        # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
+        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizerD, metrics = ['accuracy'])
 
-        # Build and compile the generator
         self.generator = self.build_generator()
-        self.generator.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
 
-        # Save .json
-        generator_model_json = self.generator.to_json()
+        self.discriminator.trainable = False
 
-        # Check folder presence
-        if not os.path.isdir(self.save_path + 'Json/'):
-            os.makedirs(self.save_path + 'Json/')
-
-        with open(self.save_path + 'Json/generator_model.json', "w") as json_file : 
-            json_file.write(generator_model_json)
-
-        # The generator takes noise as input and generates imgs
         z = Input(shape = (self.height, self.width, self.channels))
         image = self.generator(z)
 
-        # For the combined model we will only train the generator
-        self.discriminator.trainable = False
-
-        # The discriminator takes generated images as input and determines validity
         valid = self.discriminator(image)
 
-        # The combined model  (stacked generator and discriminator)
-        # Trains the generator to fool the discriminator
-        self.combined = Model(z, [image, valid])
-        self.combined.compile(loss = [self.vgg19_loss, 'binary_crossentropy'], loss_weights=[1., 1e-3], optimizer = self.optimizer)
+        self.combined = Model(z, valid)
+        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizerC, metrics = ['accuracy'])
 
-        # self.combined.summary()
+    def conv2d_block(self, layers, filters, kernel_size = (4, 4), strides = 2, momentum = 0.8, alpha = 0.2):
+        input = layers
 
-    def elementwise_mult_cast_int(self, list_x , scalar):
+        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = "same")(input)
+        layer = BatchNormalization(momentum = momentum)(layer)
+        output = LeakyReLU(alpha = alpha)(layer)
+        # output = ReLU()(layer)
 
-        return [int(v * scalar) for v in list_x ]
+        # model = Model(model, output)
 
-    # computes VGG loss or content loss
-    def vgg19_loss(self, true, prediction):
-        vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (self.height, self.width, self.channels))
-        # Make trainable as False
+        return output
 
-        vgg19.trainable = False
+    def deconv2d_block(self, layers, filters, kernel_size = (4, 4), strides = 2, momentum = 0.8, alpha = 0.2):
+        input = layers
 
-        for layer in vgg19.layers:
-            layer.trainable = False
-        
-        model = Model(inputs = vgg19.input, outputs = vgg19.get_layer('block5_conv4').output)
-        model.trainable = False
+        layer = Conv2DTranspose(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(input)
+        layer = BatchNormalization(momentum = momentum)(layer)
+        output = LeakyReLU(alpha = alpha)(layer)
+        # output = ReLU()(layer)
 
-        return K.mean(K.square(model(true) - model(prediction)))
+        # model = Model(model, output)
 
-    def build_generator(self):
-        input = Input(shape = (self.height, self.width, self.channels))
-
-        layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(input)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-        layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-        layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-
-        previous_output = layer
-
-        # Using 16 Residual Blocks
-        for i in range(16):
-            layer = self.residual_block(model = layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
-
-        layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(layer)
-        layer = BatchNormalization(momentum = 0.5)(layer)
-        layer = add([previous_output, layer])
-
-        # Using 2 UpSampling Blocks
-        for j in range(3):
-            layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = (3, 3), strides = (1, 1))
-
-        layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(layer)
-        output = Activation('tanh')(layer)
-
-        generator_model = Model(inputs = input, outputs = output)
-
-        # generator_model.summary()
-
-        return generator_model
+        return output
 
     def build_discriminator(self):
-        model = Sequential()
+        input = Input(shape = (self.height, self.width, self.channels))
 
-        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Flatten())
-        model.add(Dense(units = 1, activation = 'sigmoid'))
-
+        layers = self.conv2d_block(input, 16)
+        # layers = MaxPool2D(2)(layers)
+        layers = self.conv2d_block(layers, 32)
+        # layers = MaxPool2D(2)(layers)
+        layers = self.conv2d_block(layers, 64)
+        # layers = MaxPool2D(2)(layers)
+        layers = self.conv2d_block(layers, 128)
+        # layers = MaxPool2D(2)(layers)
+        layers = self.conv2d_block(layers, 256)
+        # layers = MaxPool2D(2)(layers)
+        layers = self.conv2d_block(layers, 512)
+        # layers = MaxPool2D(2)(layers)
+        layers = self.conv2d_block(layers, 1024)  
+        output = Conv2D(1, kernel_size = (4, 4), strides = (2, 2), padding = 'same', activation = 'relu')(layers)
+        layers = Flatten()(layers)
+        output = Dense(1, activation='sigmoid')(layers)
+        
+        model = Model(input, output)
         # model.summary()
+        return model
 
-        image = Input(shape = (self.height, self.width, self.channels))
-        validity = model(image)
+    def build_generator(self):
+        # self.vgg.summary()
+        input = self.vgg.get_layer("pool5").output
+        layers = self.deconv2d_block(input, 512)
+        layers = self.deconv2d_block(layers, 512)
+        layers = self.deconv2d_block(layers, 256)
+        layers = self.deconv2d_block(layers, 128)
+        output = Conv2DTranspose(filters = 3, kernel_size = (4, 4), strides = 2, activation = 'tanh', padding = 'same')(layers)
+        model = Model(self.vgg.input, output)
+        for layer in model.layers:
+            layer.trainable = False
+            # print(layer.get_weights())
+            if layer.name == "pool5":
+                break
+        # model.summary()
+        return model
 
-        return Model(image, validity)
-
+    
     def train(self, epochs, batch_size, save_interval):
-        # Adversarial ground truths
-        fake = np.zeros((batch_size, 1))
-        real = np.ones((batch_size, 1))
+        fake = np.zeros((batch_size))
+        real = np.ones((batch_size))
 
-        print('Training')
+        for i in range(epochs):
+            for j in range(self.DG.__len__()):
+            # for j in range(batch_size):
+                # index = np.random.randint(0, X.shape[0], batch_size)
+                # front_images = Y[index]
+                # side_images = X[index]
+                side_images, front_images = self.DG.__getitem__(j)
 
-        for k in range(epochs):
-            for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
-                # Select images
-                side_image, front_image = self.datagenerator.__getitem__(l)
+                generated_images = self.generator.predict(side_images)
+
+                discriminator_fake_loss = self.discriminator.train_on_batch(generated_images, fake)
+                discriminator_real_loss = self.discriminator.train_on_batch(front_images, real)
+                discriminator_loss = np.add(discriminator_fake_loss, discriminator_real_loss) * 0.5
                 
-                generated_image = self.generator.predict(side_image)
+                generator_loss = self.combined.train_on_batch(side_images, real)
 
-                self.discriminator.trainable = True
-
-                # Train the discriminator (real classified as ones and generated as zeros)
-                discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
-                discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
-                discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
+                print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nAccuracy of generator : %.2f%%  \nLoss of generator : %f'
+                        % (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[1] * 100, generator_loss[0]))
                 
-                self.discriminator.trainable = False
-
-                # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
-
-                # Plot the progress
-                print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
-
-                record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (i + 1, j + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[1] * 100, generator_loss[0])
                 self.history.append(record)
 
-            # If at save interval -> save generated image samples
-            if k % save_interval == 0:
-                self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
+                # if j % save_interval == 0:
+                #     save_path = 'D:/Generated Image/Training' + str(line) + '/'
+                #     self.save_image(epoch = i, batch = j, front_image = front_images, side_image = side_images, save_path = save_path)
 
-            # Save .h5
-            if k % 5 == 0:
-                # Check folder presence
-                if not os.path.isdir(self.save_path + 'H5/'):
-                    os.makedirs(self.save_path + 'H5/')
-
-                self.generator.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % k)
-                self.generator.save_weights(self.save_path + 'H5/' + 'generator_weights_epoch_%d.h5' % k)
+            self.DG.on_epoch_end()
+            if i % 1 == 0:
+                self.generator.save("D:/Generated Image/Training/{1}_{0}.h5".format(str(i), str(line)))
+                save_path = 'D:/Generated Image/Training' + str(line) + '/'
+                self.save_image(epoch = i, batch = j, front_image = front_images, side_image = side_images, save_path = save_path)
 
         self.history = np.array(self.history)
 
-        self.graph(history = self.history, save_path = self.save_path + 'History/')
+        self.graph(history = history, save_path = save_path)
 
-    def save_image(self, front_image, side_image, train_number, epoch_number, save_path):
+    def save_image(self, epoch, batch, front_image, side_image, save_path):
         # Rescale images 0 - 1
+        # generated_image = (255 * ((self.generator.predict(side_image) + 1)/2)).astype(np.uint8)
         generated_image = 0.5 * self.generator.predict(side_image) + 0.5
 
+        # print("generated_image.shape :", generated_image.shape)
+        front_image = (255 * ((front_image) + 1)/2).astype(np.uint8)
+        # print("front_image.shape :", front_image.shape)        
+        side_image = (255 * ((side_image)+1)/2).astype(np.uint8)
+        # print("side_image.shape :", side_image.shape)
 
-        front_image = (127.5 * (front_image + 1)).astype(np.uint8)
-        side_image = (127.5 * (side_image + 1)).astype(np.uint8)
-
-        # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
-        for m in range(batch_size):
+        
+        for i in range(self.batch_size):
             plt.figure(figsize = (8, 2))
 
             # Adjust the interval of the image
             plt.subplots_adjust(wspace = 0.6)
 
-            for n in range(self.n_show_image):
-                generated_image_plot = plt.subplot(1, 3, n + 1 + (2 * self.n_show_image))
+            # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
+            for m in range(n_show_image):
+                generated_image_plot = plt.subplot(1, 3, m + 1 + (2 * n_show_image))
                 generated_image_plot.set_title('Generated image (front image)')
-                plt.imshow(generated_image[m,  :  ,  :  ,  : ])
+                plt.imshow(generated_image[i])
 
-                original_front_face_image_plot = plt.subplot(1, 3, n + 1 + self.n_show_image)
+                original_front_face_image_plot = plt.subplot(1, 3, m + 1 + n_show_image)
                 original_front_face_image_plot.set_title('Origninal front image')
-                plt.imshow(front_image[m])
+                plt.imshow(front_image[i])
 
-                original_side_face_image_plot = plt.subplot(1, 3, n + 1)
+                original_side_face_image_plot = plt.subplot(1, 3, m + 1)
                 original_side_face_image_plot.set_title('Origninal side image')
-                plt.imshow(side_image[m])
+                plt.imshow(side_image[i])
 
                 # Don't show axis of x and y
                 generated_image_plot.axis('off')
@@ -271,16 +223,16 @@ class DCGAN():
             if not os.path.isdir(save_path):
                 os.makedirs(save_path)
 
-            save_name = 'Train%d_Batch%d_%d.png' % (train_number, epoch_number, self.number)
+            save_name = '%d-%d-%d.png' % (epoch, batch, i)
             save_name = os.path.join(save_path, save_name)
         
             plt.savefig(save_name)
             plt.close()
 
     def graph(self, history, save_path):
-        plt.plot(self.history[:, 2])     
-        plt.plot(self.history[:, 3])
-        plt.plot(self.history[:, 4])
+        plt.plot(history[:, 2])     
+        plt.plot(history[:, 3])
+        plt.plot(history[:, 4])
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.title('Generative adversarial network')
@@ -288,7 +240,7 @@ class DCGAN():
 
         figure = plt.gcf()
 
-        # plt.show()
+        plt.show()
 
         save_path = save_path
 
@@ -304,5 +256,5 @@ class DCGAN():
         plt.close()
 
 if __name__ == '__main__':
-    dcgan = DCGAN()
-    dcgan.train(epochs = train_epochs, batch_size = batch_size, save_interval = save_interval)
+    dcgan = model_1()
+    dcgan.train(epochs = epochs, batch_size = batch_size, save_interval = n_show_image)
