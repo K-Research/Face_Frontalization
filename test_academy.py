@@ -17,14 +17,14 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 92
+time = 93
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 train_epochs = 10000
-batch_size = 1
+batch_size = 64
 save_interval = 1
 
 class DCGAN():
@@ -37,9 +37,10 @@ class DCGAN():
         self.width = 224
         self.channels = 3
 
-        self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
+        self.discriminator_optimizer = Adam(lr = 0.00002, beta_1 = 0.5, beta_2 = 0.999)
+        self.combine_optimizer = Adam(lr = 0.002, beta_1 = 0.5, beta_2 = 0.999)
 
-        self.senet50_output_shape = (8631, )
+        self.vgg16 = self.build_vgg16()
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
@@ -48,11 +49,10 @@ class DCGAN():
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
+        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.discriminator_optimizer, metrics = ['accuracy'])
 
         # Build and compile the generator
         self.generator = self.build_generator()
-        self.generator.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
 
         # Save .json
         generator_model_json = self.generator.to_json()
@@ -77,109 +77,60 @@ class DCGAN():
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
         self.combined = Model(z, [image, valid])
-        self.combined.compile(loss = [self.vgg19_loss, 'binary_crossentropy'], loss_weights=[1., 1e-3], optimizer = self.optimizer)
+        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.combine_optimizer)
 
         # self.combined.summary()
 
-    def discriminator_block(self, model, filters, kernel_size, strides):
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
-        layer = BatchNormalization(momentum = 0.5)(layer)
-        layer = LeakyReLU(alpha = 0.2)(layer)
-
-        return layer
-
-    def residual_block(self, model, filters, kernel_size, strides):
-        generator = model
-
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(generator)
-        layer = BatchNormalization(momentum = 0.5)(layer)
-
-        # Using Parametric ReLU
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'same')(layer)
-        output = BatchNormalization(momentum = 0.5)(layer)
-
-        model = add([generator, output])
-
-        return model
-
-    def up_sampling_block(self, model, filters, kernel_size, strides):
-        # In place of Conv2D and UpSampling2D we can also use Conv2DTranspose (Both are used for Deconvolution)
-        # Even we can have our own function for deconvolution (i.e one made in Utils.py)
-        # layer = Conv2DTranspose(filters = filters, kernel_size = kernal_size, strides = strides, padding = 'same)(layer)
-        layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(model)
-        layer = UpSampling2D(size = (2, 2))(layer)
-        layer = LeakyReLU(alpha = 0.2)(layer)
-
-        return layer
-    
-    # computes VGG loss or content loss
-    def vgg19_loss(self, true, prediction):
-        vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (self.height, self.width, self.channels))
+    def build_vgg16(self):
+        vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
         # Make trainable as False
 
-        vgg19.trainable = False
+        vgg16.trainable = False
 
-        for layer in vgg19.layers:
+        for layer in vgg16.layers:
             layer.trainable = False
-        
-        model = Model(inputs = vgg19.input, outputs = vgg19.get_layer('block5_conv4').output)
-        model.trainable = False
 
-        return K.mean(K.square(model(true) - model(prediction)))
+        # vgg16.summary()
+
+        return vgg16
 
     def build_generator(self):
-        input = Input(shape = (self.height, self.width, self.channels))
+        generator_input = self.vgg16.get_layer('pool5').output
 
-        layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(input)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-        layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
-        layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(layer)
-        layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(layer)
-        layer = MaxPooling2D(pool_size = (2, 2))(layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
 
-        previous_output = layer
+        generator_output = Activation('tanh')(generator_layer)
 
-        # Using 16 Residual Blocks
-        for i in range(16):
-            layer = self.residual_block(model = layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
+        generator = Model(inputs = self.vgg16.input, outputs = generator_output)
 
-        layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(layer)
-        layer = BatchNormalization(momentum = 0.5)(layer)
-        layer = add([previous_output, layer])
+        # generator.summary()
 
-        # Using 2 UpSampling Blocks
-        for j in range(3):
-            layer = self.up_sampling_block(model = layer, filters = 128, kernel_size = (3, 3), strides = (1, 1))
-
-        layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(layer)
-        output = Activation('tanh')(layer)
-
-        generator_model = Model(inputs = input, outputs = output)
-
-        # generator_model.summary()
-
-        return generator_model
+        return generator
 
     def build_discriminator(self):
         model = Sequential()
 
-        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
+        model.add(Conv2D(16, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
+        model.add(LeakyReLU(alpha = 0.2))
+        # model.add(Dropout(0.25))
+        model.add(Conv2D(32, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        # model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
+        model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
         model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
@@ -191,11 +142,15 @@ class DCGAN():
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(Conv2D(512, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(Conv2D(1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(1, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
         model.add(Dropout(0.25))
