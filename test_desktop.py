@@ -21,13 +21,13 @@ time = 1
 X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
-train_epochs = 100
-batch_size = 16
+train_epochs = 1000
+batch_size = 1
 save_interval = 1
 
 class DCGAN():
     def __init__(self):
-        # Load data
+       # Load data
         self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
 
         # Prameters
@@ -35,22 +35,21 @@ class DCGAN():
         self.width = 224
         self.channels = 3
 
-        self.optimizer = Adam(lr = 0.0002, beta_1 = 0.5)
+        self.discriminator_optimizer = Adam(lr = 0.00002, beta_1 = 0.5, beta_2 = 0.999)
+        self.combine_optimizer = Adam(lr = 0.002, beta_1 = 0.5, beta_2 = 0.999)
 
-        self.senet50_output_shape = (8631, )
+        self.vgg16 = self.build_vgg16()
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
         self.number = 1
         self.save_path = 'D:/Generated Image/Training' + str(time) + '/'
 
-        self.senet50 = self.build_senet50()
-
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
+        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.discriminator_optimizer, metrics = ['accuracy'])
 
-        # Build the generator
+        # Build and compile the generator
         self.generator = self.build_generator()
 
         # Save .json
@@ -63,66 +62,56 @@ class DCGAN():
         with open(self.save_path + 'Json/generator_model.json', "w") as json_file : 
             json_file.write(generator_model_json)
 
-        # The generator takes side images as input and generates images
-        side_image = Input(shape = (self.height, self.width, self.channels))
-        z = self.senet50(side_image)
-        generated_image = self.generator(z)
+        # The generator takes noise as input and generates imgs
+        z = Input(shape = (self.height, self.width, self.channels))
+        image = self.generator(z)
 
         # For the combined model we will only train the generator
         self.discriminator.trainable = False
 
-        # The discriminator takes generated images as input and determines validity
-        valid = self.discriminator(generated_image)
+        # The discriminator takes generated images as input and determines validiy
+        valid = self.discriminator(image)
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(side_image, valid)
-        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
+        self.combined = Model(z, [image, valid])
+        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.combine_optimizer)
 
         # self.combined.summary()
 
-    def build_senet50(self):
-        senet50 = VGGFace(include_top = True, model = 'senet50', weights = 'vggface')
+    def build_vgg16(self):
+        vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+        # Make trainable as False
 
-        senet50.trainable = False
+        vgg16.trainable = False
 
-        for layer in senet50.layers:
+        for layer in vgg16.layers:
             layer.trainable = False
 
-        # senet50.summary()
+        # vgg16.summary()
 
-        return senet50
+        return vgg16
 
     def build_generator(self):
-        generator_input = Input(shape = self.senet50_output_shape)
+        generator_input = self.vgg16.get_layer('pool5').output
 
-        generator_layer = Reshape((3, 7, 411))(generator_input)
-        generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 2), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (3, 3), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
 
         generator_output = Activation('tanh')(generator_layer)
 
-        generator = Model(inputs = generator_input, outputs = generator_output)
+        generator = Model(inputs = self.vgg16.input, outputs = generator_output)
 
         # generator.summary()
 
@@ -131,38 +120,38 @@ class DCGAN():
     def build_discriminator(self):
         model = Sequential()
 
-        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
+        model.add(Conv2D(16, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
+        model.add(Conv2D(32, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        # model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        # model.add(Dropout(0.25))
         model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
         model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
         model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        # model.add(Dropout(0.25))
+        model.add(Conv2D(512, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        # model.add(Dropout(0.25))
+        model.add(Conv2D(1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
+        model.add(Conv2D(1, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        # model.add(Dropout(0.25))
         model.add(Flatten())
         model.add(Dense(units = 1, activation = 'sigmoid'))
 
@@ -184,14 +173,12 @@ class DCGAN():
 
         print('Training')
 
-        for k in range(1, epochs + 1):
+        for k in range(epochs):
             for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
                 # Select images
-                side_image, front_image = self.datagenerator.__getitem__(l)
-
-                # Generate a batch of new images
-                latent_vector = self.senet50.predict(side_image)
-                generated_image = self.generator.predict(latent_vector)
+                side_image, front_image = self.datagenerator.__getitem__(l - 1)
+                
+                generated_image = self.generator.predict(side_image)
 
                 self.discriminator.trainable = True
 
@@ -203,18 +190,20 @@ class DCGAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, real)
+                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+                        % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
+                record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
-                # If at save interval -> save generated image samples
-                if l % save_interval == 0:
-                    self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
+            self.datagenerator.on_epoch_end()
+
+            # If at save interval -> save generated image samples
+            if k % save_interval == 0:
+                self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
 
             # Save .h5
             if k % 5 == 0:
@@ -230,10 +219,9 @@ class DCGAN():
         self.graph(history = self.history, save_path = self.save_path + 'History/')
 
     def save_image(self, front_image, side_image, train_number, epoch_number, save_path):
-        latent_vector = self.senet50.predict(side_image)
-
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(latent_vector) + 0.5
+        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
@@ -280,9 +268,9 @@ class DCGAN():
             plt.close()
 
     def graph(self, history, save_path):
-        plt.plot(self.history[  :  , 2])     
-        plt.plot(self.history[  :  , 3])
-        plt.plot(self.history[  :  , 4])
+        plt.plot(self.history[:, 2])     
+        plt.plot(self.history[:, 3])
+        plt.plot(self.history[:, 4])
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.title('Generative adversarial network')
