@@ -17,14 +17,14 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 90
+time = 91
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 train_epochs = 1000
-batch_size = 32
+batch_size = 16
 save_interval = 1
 
 class DCGAN():
@@ -153,7 +153,7 @@ class DCGAN():
 
         # Using 2 UpSampling Blocks
         for j in range(3):
-            layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = (3, 3), strides = (1, 1))
+            layer = self.up_sampling_block(model = layer, filters = 128, kernel_size = (3, 3), strides = (1, 1))
 
         layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(layer)
         output = Activation('tanh')(layer)
