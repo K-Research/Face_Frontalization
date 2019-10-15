@@ -86,6 +86,9 @@ class DCGAN():
 
         senet50.trainable = False
 
+        for layer in senet50.layers:
+            layer.trainable = False
+
         # senet50.summary()
 
         return senet50
