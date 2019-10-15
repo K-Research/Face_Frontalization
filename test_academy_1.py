@@ -28,9 +28,8 @@ optimizerD = Adam(lr = 0.00002, beta_1 = 0.5, beta_2 = 0.999)
 optimizerC = Adam(lr = 0.002, beta_1 = 0.5, beta_2 = 0.999)
 number = 0
 
-
-X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
-Y_train = glob('D:/Korean 224X224X3 filtering/Y/*jpg')
+X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
+Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 # X = np.load("./swh/npy/X.npy")
 # Y = np.load("./swh/npy/Y.npy")
@@ -122,7 +121,6 @@ class model_1():
         model.add(Conv2D(1, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        # model.add(Dropout(0.25))
         model.add(Flatten())
         model.add(Dense(units = 1, activation = 'sigmoid'))
         
