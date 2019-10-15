@@ -125,6 +125,17 @@ class model_1():
         # model.add(Dropout(0.25))
         model.add(Flatten())
         model.add(Dense(units = 1, activation = 'sigmoid'))
+        
+        # model.summary()
+
+        image = Input(shape = (self.height, self.width, self.channels))
+        validity = model(image)
+
+        discriminator = Model(inputs = image, outputs = validity)
+
+        # discriminator.summary()
+
+        return discriminator
 
     def build_generator(self):
         # self.vgg.summary()
