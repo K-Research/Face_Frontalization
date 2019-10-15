@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 89
+time = 90
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -164,49 +164,23 @@ class DCGAN():
         return generator_model
 
     def build_discriminator(self):
-        model = Sequential()
+        senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
-        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
-        model.add(Flatten())
-        model.add(Dense(units = 1, activation = 'sigmoid'))
+        for layer in vgg19.layers:
+            layer.trainable = False
+
+        # senet50_layer.summary()
+        
+        senet50_last_layer = senet50_layer.get_layer('pool5').output
+        layer = Flatten()(senet50_last_layer)
+
+        discriminator_output = Dense(1, activation = 'sigmoid')(layer)
+
+        model = Model(inputs = senet50_layer.input, outputs = discriminator_output)
 
         # model.summary()
 
-        image = Input(shape = (self.height, self.width, self.channels))
-        validity = model(image)
-
-        return Model(image, validity)
+        return model
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
@@ -259,10 +233,9 @@ class DCGAN():
         self.graph(history = self.history, save_path = self.save_path + 'History/')
 
     def save_image(self, front_image, side_image, train_number, epoch_number, save_path):
-        latent_vector = self.senet50.predict(side_image)
-
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(latent_vector) + 0.5
+        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
