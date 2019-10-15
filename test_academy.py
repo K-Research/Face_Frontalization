@@ -8,6 +8,7 @@ from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTran
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
+from keras_vggface.vggface import VGGFace
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -16,14 +17,14 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 89
+time = 92
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
-train_epochs = 1000
-batch_size = 16
+train_epochs = 10000
+batch_size = 1
 save_interval = 1
 
 class DCGAN():
@@ -152,7 +153,7 @@ class DCGAN():
 
         # Using 2 UpSampling Blocks
         for j in range(3):
-            layer = self.up_sampling_block(model = layer, filters = 256, kernel_size = (3, 3), strides = (1, 1))
+            layer = self.up_sampling_block(model = layer, filters = 128, kernel_size = (3, 3), strides = (1, 1))
 
         layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(layer)
         output = Activation('tanh')(layer)
@@ -206,7 +207,11 @@ class DCGAN():
         image = Input(shape = (self.height, self.width, self.channels))
         validity = model(image)
 
-        return Model(image, validity)
+        discriminator = Model(inputs = image, outputs = validity)
+
+        # discriminator.summary()
+
+        return discriminator
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
@@ -259,10 +264,9 @@ class DCGAN():
         self.graph(history = self.history, save_path = self.save_path + 'History/')
 
     def save_image(self, front_image, side_image, train_number, epoch_number, save_path):
-        latent_vector = self.senet50.predict(side_image)
-
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(latent_vector) + 0.5
+        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
