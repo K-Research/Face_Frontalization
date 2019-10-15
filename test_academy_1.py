@@ -14,7 +14,7 @@ height = 224
 width = 224
 channels = 3
 z_dimension = 512
-batch_size = 1
+batch_size = 32
 epochs = 1000
 line = 101
 n_show_image = 1
@@ -28,8 +28,8 @@ optimizerC = Adam(lr = 0.002, beta_1 = 0.5, beta_2 = 0.999)
 number = 0
 
 
-X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
-Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
+X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
+Y_train = glob('D:/Korean 224X224X3 filtering/Y/*jpg')
 
 # X = np.load("./swh/npy/X.npy")
 # Y = np.load("./swh/npy/Y.npy")
@@ -95,28 +95,35 @@ class model_1():
         return output
 
     def build_discriminator(self):
-        input = Input(shape = (self.height, self.width, self.channels))
+        model = Sequential()
 
-        layers = self.conv2d_block(input, 16)
-        # layers = MaxPool2D(2)(layers)
-        layers = self.conv2d_block(layers, 32)
-        # layers = MaxPool2D(2)(layers)
-        layers = self.conv2d_block(layers, 64)
-        # layers = MaxPool2D(2)(layers)
-        layers = self.conv2d_block(layers, 128)
-        # layers = MaxPool2D(2)(layers)
-        layers = self.conv2d_block(layers, 256)
-        # layers = MaxPool2D(2)(layers)
-        layers = self.conv2d_block(layers, 512)
-        # layers = MaxPool2D(2)(layers)
-        layers = self.conv2d_block(layers, 1024)  
-        output = Conv2D(1, kernel_size = (4, 4), strides = (2, 2), padding = 'same', activation = 'relu')(layers)
-        layers = Flatten()(layers)
-        output = Dense(1, activation='sigmoid')(layers)
-        
-        model = Model(input, output)
-        # model.summary()
-        return model
+        model.add(Conv2D(16, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(32, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(512, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Conv2D(1, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        # model.add(Dropout(0.25))
+        model.add(Flatten())
+        model.add(Dense(units = 1, activation = 'sigmoid'))
 
     def build_generator(self):
         # self.vgg.summary()
