@@ -95,7 +95,7 @@ class DCGAN():
         return vgg16
 
     def build_generator(self):
-        generator_input = self.senet50.get_layer('pool5').output
+        generator_input = self.vgg16.get_layer('pool5').output
 
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
