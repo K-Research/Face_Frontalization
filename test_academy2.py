@@ -24,7 +24,7 @@ X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Korean 224X224X3 filtering/Y/*jpg')
 
 train_epochs = 10000
-batch_size = 64
+batch_size = 32
 save_interval = 1
 
 class DCGAN():
@@ -210,9 +210,9 @@ class DCGAN():
                 record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
-            # If at save interval -> save generated image samples
-            if k % save_interval == 0:
-                self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
+                # If at save interval -> save generated image samples
+                if l % save_interval == 0:
+                    self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
 
             # Save .h5
             if k % 5 == 0:
