@@ -14,7 +14,7 @@ height = 224
 width = 224
 channels = 3
 z_dimension = 512
-batch_size = 1
+batch_size = 64
 epochs = 1000
 line = 101
 n_show_image = 1
@@ -28,8 +28,8 @@ optimizerC = Adam(lr = 0.002, beta_1 = 0.5, beta_2 = 0.999)
 number = 0
 
 
-X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
-Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
+X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
+Y_train = glob('D:/Korean 224X224X3 filtering/Y/*jpg')
 
 # X = np.load("./swh/npy/X.npy")
 # Y = np.load("./swh/npy/Y.npy")
