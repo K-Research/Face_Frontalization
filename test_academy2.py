@@ -187,7 +187,7 @@ class DCGAN():
         for k in range(epochs):
             for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
                 # Select images
-                side_image, front_image = self.datagenerator.__getitem__(l)
+                side_image, front_image = self.datagenerator.__getitem__(l - 1)
                 
                 generated_image = self.generator.predict(side_image)
 
@@ -209,6 +209,8 @@ class DCGAN():
 
                 record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
+            
+            self.datagenerator.on_epoch_end()
 
             # If at save interval -> save generated image samples
             if k % save_interval == 0:
