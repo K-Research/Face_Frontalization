@@ -17,14 +17,14 @@ from tqdm import tqdm
 
 np.random.seed(10)
 
-time = 91
+time = 92
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
-train_epochs = 1000
-batch_size = 16
+train_epochs = 10000
+batch_size = 1
 save_interval = 1
 
 class DCGAN():
@@ -165,23 +165,53 @@ class DCGAN():
         return generator_model
 
     def build_discriminator(self):
-        senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+        model = Sequential()
 
-        for layer in senet50_layer.layers:
-            layer.trainable = False
-
-        # senet50_layer.summary()
-        
-        senet50_last_layer = senet50_layer.get_layer('activation_81').output
-        layer = Flatten()(senet50_last_layer)
-
-        discriminator_output = Dense(1, activation = 'sigmoid')(layer)
-
-        model = Model(inputs = senet50_layer.input, outputs = discriminator_output)
+        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(256, kernel_size = (3, 3), strides = (2, 2), padding = 'same'))
+        model.add(BatchNormalization(momentum = 0.8))
+        model.add(LeakyReLU(alpha = 0.2))
+        model.add(Dropout(0.25))
+        model.add(Flatten())
+        model.add(Dense(units = 1, activation = 'sigmoid'))
 
         # model.summary()
 
-        return model
+        image = Input(shape = (self.height, self.width, self.channels))
+        validity = model(image)
+
+        discriminator = Model(inputs = image, outputs = validity)
+
+        # discriminator.summary()
+
+        return discriminator
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
