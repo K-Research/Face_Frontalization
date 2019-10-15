@@ -40,7 +40,7 @@ class DCGAN():
         self.discriminator_optimizer = Adam(lr = 0.00002, beta_1 = 0.5, beta_2 = 0.999)
         self.combine_optimizer = Adam(lr = 0.002, beta_1 = 0.5, beta_2 = 0.999)
 
-        self.vgg16 = self.build_vgg16()
+        self.senet50 = self.build_senet50()
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
@@ -81,21 +81,21 @@ class DCGAN():
 
         # self.combined.summary()
 
-    def build_vgg16(self):
-        vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+    def build_senet50(self):
+        senet50 = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
         # Make trainable as False
 
-        vgg16.trainable = False
+        senet50.trainable = False
 
-        for layer in vgg16.layers:
+        for layer in senet50.layers:
             layer.trainable = False
 
-        # vgg16.summary()
+        # senet50.summary()
 
-        return vgg16
+        return senet50
 
     def build_generator(self):
-        generator_input = self.vgg16.get_layer('pool5').output
+        generator_input = self.senet50.get_layer('activation_81').output
 
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
