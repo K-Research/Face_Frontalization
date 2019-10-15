@@ -122,7 +122,7 @@ class DCGAN():
 
         generator_output = Activation('tanh')(generator_layer)
 
-        generator = Model(inputs = self.vgg16.input, outputs = generator_output)
+        generator = Model(inputs = self.senet50.input, outputs = generator_output)
 
         # generator.summary()
 
