@@ -1,7 +1,7 @@
 from keras_vggface.vggface import VGGFace
 from keras_vggface.utils import preprocess_input
 from keras.engine import Model
-from keras.layers import Flatten, Dense, Input, Conv2D, Conv2DTranspose, BatchNormalization, LeakyReLU, ReLU
+from keras.layers import Flatten, Dense, Input, Conv2D, Conv2DTranspose, BatchNormalization, LeakyReLU, ReLU, Sequential
 from keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import numpy as np
