@@ -8,6 +8,7 @@ from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTran
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
+from keras_vggface.vggface import VGGFace
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -23,7 +24,7 @@ X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 train_epochs = 1000
-batch_size = 16
+batch_size = 32
 save_interval = 1
 
 class DCGAN():
@@ -166,12 +167,12 @@ class DCGAN():
     def build_discriminator(self):
         senet50_layer = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
 
-        for layer in vgg19.layers:
+        for layer in senet50_layer.layers:
             layer.trainable = False
 
         # senet50_layer.summary()
         
-        senet50_last_layer = senet50_layer.get_layer('pool5').output
+        senet50_last_layer = senet50_layer.get_layer('activation_81').output
         layer = Flatten()(senet50_last_layer)
 
         discriminator_output = Dense(1, activation = 'sigmoid')(layer)
