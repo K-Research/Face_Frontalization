@@ -106,13 +106,13 @@ class DCGAN():
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
@@ -210,9 +210,9 @@ class DCGAN():
                 record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
-                # If at save interval -> save generated image samples
-                if l % save_interval == 0:
-                    self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
+            # If at save interval -> save generated image samples
+            if k % save_interval == 0:
+                self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
 
             # Save .h5
             if k % 5 == 0:
