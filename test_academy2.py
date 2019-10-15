@@ -24,7 +24,7 @@ X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Korean 224X224X3 filtering/Y/*jpg')
 
 train_epochs = 10000
-batch_size = 32
+batch_size = 64
 save_interval = 1
 
 class DCGAN():
@@ -40,7 +40,7 @@ class DCGAN():
         self.discriminator_optimizer = Adam(lr = 0.00002, beta_1 = 0.5, beta_2 = 0.999)
         self.combine_optimizer = Adam(lr = 0.002, beta_1 = 0.5, beta_2 = 0.999)
 
-        self.senet50 = self.build_senet50()
+        self.vgg16 = self.build_vgg16()
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
@@ -81,21 +81,21 @@ class DCGAN():
 
         # self.combined.summary()
 
-    def build_senet50(self):
-        senet50 = VGGFace(include_top = False, model = 'senet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+   def build_vgg16(self):
+        vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
         # Make trainable as False
 
-        senet50.trainable = False
+        vgg16.trainable = False
 
-        for layer in senet50.layers:
+        for layer in vgg16.layers:
             layer.trainable = False
 
-        # senet50.summary()
+        # vgg16.summary()
 
-        return senet50
+        return vgg16
 
     def build_generator(self):
-        generator_input = self.senet50.get_layer('activation_81').output
+        generator_input = self.senet50.get_layer('pool5').output
 
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
@@ -122,7 +122,7 @@ class DCGAN():
 
         generator_output = Activation('tanh')(generator_layer)
 
-        generator = Model(inputs = self.senet50.input, outputs = generator_output)
+        generator = Model(inputs = self.vgg16.input, outputs = generator_output)
 
         # generator.summary()
 
@@ -138,31 +138,31 @@ class DCGAN():
         # model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
         model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
         model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
         model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
         model.add(Conv2D(512, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
         model.add(Conv2D(1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
         model.add(Conv2D(1, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
         model.add(BatchNormalization(momentum = 0.8))
         model.add(LeakyReLU(alpha = 0.2))
-        model.add(Dropout(0.25))
+        # model.add(Dropout(0.25))
         model.add(Flatten())
         model.add(Dense(units = 1, activation = 'sigmoid'))
 
