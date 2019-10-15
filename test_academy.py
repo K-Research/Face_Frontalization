@@ -24,7 +24,7 @@ X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 train_epochs = 10000
-batch_size = 64
+batch_size = 32
 save_interval = 1
 
 class DCGAN():
