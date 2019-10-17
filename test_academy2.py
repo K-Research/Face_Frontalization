@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+1from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
@@ -25,7 +25,7 @@ save_interval = 1
 
 class Autoencoder():
     def __init__(self):
-       # Load data
+        # Load data
         self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
 
         # Prameters
