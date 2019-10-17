@@ -1,4 +1,4 @@
-1from __future__ import print_function, division
+from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
