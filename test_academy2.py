@@ -1,4 +1,4 @@
-        12from __future__ import print_function, division
+from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
@@ -187,6 +187,8 @@ class Autoencoder():
         
             plt.savefig(save_name)
             plt.close()
+
+     self.number = 0
 
     def graph(self, history, save_path):
         plt.plot(self.history[:, 2])     
