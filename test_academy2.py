@@ -2,10 +2,8 @@ from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
-from keras.applications.vgg19 import VGG19
-import keras.backend as K
-from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, UpSampling2D, ZeroPadding2D
-from keras.layers.advanced_activations import LeakyReLU, PReLU
+from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
+from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
 from keras_vggface.vggface import VGGFace
@@ -15,14 +13,14 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 1
+time = 4
 
 # Load data
-X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
-Y_train = glob('D:/Korean 224X224X3 filtering/Y/*jpg')
+X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
+Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
-train_epochs = 10000
-batch_size = 32
+train_epochs = 1000
+batch_size = 128
 save_interval = 1
 
 class DCGAN():
@@ -35,8 +33,7 @@ class DCGAN():
         self.width = 224
         self.channels = 3
 
-        self.discriminator_optimizer = Adam(lr = 0.00002, beta_1 = 0.5, beta_2 = 0.999)
-        self.combine_optimizer = Adam(lr = 0.002, beta_1 = 0.5, beta_2 = 0.999)
+        self.optimizer = Adam(lr = 0.001, beta_1 = 0.5, beta_2 = 0.99)
 
         self.vgg16 = self.build_vgg16()
 
@@ -45,12 +42,9 @@ class DCGAN():
         self.number = 1
         self.save_path = 'D:/Generated Image/Training' + str(time) + '/'
 
-        # Build and compile the discriminator
-        self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.discriminator_optimizer, metrics = ['accuracy'])
-
-        # Build and compile the generator
-        self.generator = self.build_generator()
+        # Build and compile the autoencoder
+        self.autoencoder = self.build_autoencoder()
+        self.build_autoencoder.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # Save .json
         generator_model_json = self.generator.to_json()
@@ -61,23 +55,6 @@ class DCGAN():
 
         with open(self.save_path + 'Json/generator_model.json', "w") as json_file : 
             json_file.write(generator_model_json)
-
-        # The generator takes noise as input and generates imgs
-        z = Input(shape = (self.height, self.width, self.channels))
-        image = self.generator(z)
-
-        # For the combined model we will only train the generator
-        self.discriminator.trainable = False
-
-        # The discriminator takes generated images as input and determines validity
-        valid = self.discriminator(image)
-
-        # The combined model  (stacked generator and discriminator)
-        # Trains the generator to fool the discriminator
-        self.combined = Model(z, [image, valid])
-        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.combine_optimizer)
-
-        # self.combined.summary()
 
     def build_vgg16(self):
         vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
@@ -92,7 +69,7 @@ class DCGAN():
 
         return vgg16
 
-    def build_generator(self):
+    def build_autoencoder(self):
         generator_input = self.vgg16.get_layer('pool5').output
 
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_input)
@@ -126,55 +103,6 @@ class DCGAN():
 
         return generator
 
-    def build_discriminator(self):
-        model = Sequential()
-
-        model.add(Conv2D(16, kernel_size = (4, 4), strides = (2, 2), input_shape = (self.height, self.width, self.channels), padding = 'same'))
-        model.add(LeakyReLU(alpha = 0.2))
-        # model.add(Dropout(0.25))
-        model.add(Conv2D(32, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        # model.add(ZeroPadding2D(padding = ((0, 1), (0, 1))))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        # model.add(Dropout(0.25))
-        model.add(Conv2D(64, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        # model.add(Dropout(0.25))
-        model.add(Conv2D(128, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        # model.add(Dropout(0.25))
-        model.add(Conv2D(256, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        # model.add(Dropout(0.25))
-        model.add(Conv2D(512, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        # model.add(Dropout(0.25))
-        model.add(Conv2D(1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        # model.add(Dropout(0.25))
-        model.add(Conv2D(1, kernel_size = (4, 4), strides = (2, 2), padding = 'same'))
-        model.add(BatchNormalization(momentum = 0.8))
-        model.add(LeakyReLU(alpha = 0.2))
-        # model.add(Dropout(0.25))
-        model.add(Flatten())
-        model.add(Dense(units = 1, activation = 'sigmoid'))
-
-        # model.summary()
-
-        image = Input(shape = (self.height, self.width, self.channels))
-        validity = model(image)
-
-        discriminator = Model(inputs = image, outputs = validity)
-
-        # discriminator.summary()
-
-        return discriminator
-
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
         fake = np.zeros((batch_size, 1))
@@ -207,7 +135,7 @@ class DCGAN():
 
                 record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
-            
+
             self.datagenerator.on_epoch_end()
 
             # If at save interval -> save generated image samples
