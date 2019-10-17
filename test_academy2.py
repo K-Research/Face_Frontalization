@@ -16,14 +16,14 @@ from tqdm import tqdm
 time = 4
 
 # Load data
-X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
-Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
+X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
+Y_train = glob('D:/Korean 224X224X3 filtering/Y/*jpg')
 
-train_epochs = 1000
-batch_size = 128
+epochs = 1000
+batch_size = 32
 save_interval = 1
 
-class DCGAN():
+class Autoencoder():
     def __init__(self):
        # Load data
         self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
@@ -44,10 +44,10 @@ class DCGAN():
 
         # Build and compile the autoencoder
         self.autoencoder = self.build_autoencoder()
-        self.build_autoencoder.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
+        self.autoencoder.compile(loss = 'mse', optimizer = self.optimizer)
 
         # Save .json
-        generator_model_json = self.generator.to_json()
+        generator_model_json = self.autoencoder.to_json()
 
         # Check folder presence
         if not os.path.isdir(self.save_path + 'Json/'):
@@ -72,13 +72,13 @@ class DCGAN():
     def build_autoencoder(self):
         generator_input = self.vgg16.get_layer('pool5').output
 
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_input)
+        generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
@@ -87,7 +87,7 @@ class DCGAN():
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
@@ -104,43 +104,28 @@ class DCGAN():
         return generator
 
     def train(self, epochs, batch_size, save_interval):
-        # Adversarial ground truths
-        fake = np.zeros((batch_size, 1))
-        real = np.ones((batch_size, 1))
-
         print('Training')
 
-        for k in range(epochs):
+        for k in range(1, epochs + 1):
             for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
                 # Select images
                 side_image, front_image = self.datagenerator.__getitem__(l - 1)
                 
-                generated_image = self.generator.predict(side_image)
-
-                self.discriminator.trainable = True
-
-                # Train the discriminator (real classified as ones and generated as zeros)
-                discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
-                discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
-                discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
+                # Train the autoencoder (real classified as ones and generated as zeros)
+                autoencoer_loss = self.autoencoder.train_on_batch(side_image, front_image)
                 
-                self.discriminator.trainable = False
-
-                # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
-
                 # Plot the progress
-                print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                print ('\nTraining epoch : %d \nTraining batch : %d \nLoss of autoencoder : %f ' % (k, l, autoencoer_loss))
 
-                record = (k + 1, l + 1, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k, l, autoencoer_loss)
+
                 self.history.append(record)
 
-            self.datagenerator.on_epoch_end()
+                # If at save interval -> save generated image samples
+                if l % 1 == 0:
+                    self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
-            # If at save interval -> save generated image samples
-            if k % save_interval == 0:
-                self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
+            self.datagenerator.on_epoch_end()
 
             # Save .h5
             if k % 5 == 0:
@@ -148,17 +133,16 @@ class DCGAN():
                 if not os.path.isdir(self.save_path + 'H5/'):
                     os.makedirs(self.save_path + 'H5/')
 
-                self.generator.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % k)
-                self.generator.save_weights(self.save_path + 'H5/' + 'generator_weights_epoch_%d.h5' % k)
+                self.autoencoder.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % k)
+                self.autoencoder.save_weights(self.save_path + 'H5/' + 'generator_weights_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
         self.graph(history = self.history, save_path = self.save_path + 'History/')
 
-    def save_image(self, front_image, side_image, train_number, epoch_number, save_path):
+    def save_image(self, front_image, side_image, epoch_number, batch_number, save_path):
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
-
+        generated_image = 0.5 * self.autoencoder.predict(side_image) + 0.5
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
@@ -198,7 +182,7 @@ class DCGAN():
             if not os.path.isdir(save_path):
                 os.makedirs(save_path)
 
-            save_name = 'Train%d_Batch%d_%d.png' % (train_number, epoch_number, self.number)
+            save_name = 'Train%d_Batch%d_%d.png' % (epoch_number, batch_number, self.number)
             save_name = os.path.join(save_path, save_name)
         
             plt.savefig(save_name)
@@ -231,5 +215,5 @@ class DCGAN():
         plt.close()
 
 if __name__ == '__main__':
-    dcgan = DCGAN()
-    dcgan.train(epochs = train_epochs, batch_size = batch_size, save_interval = save_interval)
+    autoencoder = Autoencoder()
+    autoencoder.train(epochs = epochs, batch_size = batch_size, save_interval = save_interval)
