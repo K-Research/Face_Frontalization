@@ -263,6 +263,8 @@ class DCGAN():
             plt.savefig(save_name)
             plt.close()
 
+        self.number = 0
+
     def graph(self, history, save_path):
         plt.plot(self.history[  :  , 2])     
         plt.plot(self.history[  :  , 3])
