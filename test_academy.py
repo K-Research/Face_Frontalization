@@ -233,11 +233,7 @@ class DCGAN():
             plt.savefig(save_name)
             plt.close()
 
-<<<<<<< HEAD
         self.number = 1
-=======
-        self.number = 0
->>>>>>> 09c62a1655313ddb03052711bbf74ff9384b253e
 
     def graph(self, history, save_path):
         plt.plot(self.history[:, 2])     
