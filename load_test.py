@@ -4,37 +4,49 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy
 from keras.preprocessing.image import load_img, img_to_array
-# AI Model
+from datagenerator_predict import DataGenerator
+from glob import glob
+import os
 
-# config = tf.ConfigProto()
-# config.gpu_options.allow_growth = True
-# sess = tf.Session(config=config)
+time = 1
 
-image = cv2.imread('G:/001-02-04.jpg')
+save_path = 'D:/Generated Image/Testing' + str(time) + '/'
+number = 1
 
-print(image.shape)
+X = glob('D:/TEST/*jpg')
 
-image = img_to_array(image)
+datagenerator = DataGenerator(X, batch_size = 64)
 
-print(image.shape)
+generator = load_model('D:/generator_epoch_10.h5')
 
-images = []
-images.append(image)
-images.append(image)
+for i in range(datagenerator.__len__()):
+    image = datagenerator.__getitem__(i)
+    
+    original_image = ((image + 1) * 127.5).astype(numpy.uint8)
 
-images = numpy.array(images)
+    generated_image = 0.5 * generator.predict(image) + 0.5
 
-print(images.shape)
+    original_side_face_image_plot = plt.subplot(1, 2, 1)
+    original_side_face_image_plot.set_title('Origninal front image')
+    original_side_face_image_plot.imshow(original_image[i])
 
-json_file=open("G:/generator_model.json","r")
-loaded_json=json_file.read()
-json_file.close()
+    generated_image_plot = plt.subplot(1, 2, 2)
+    generated_image_plot.set_title('Generated image (front image)')
+    generated_image_plot.imshow(generated_image[i])  
 
-model=model_from_json(loaded_json)
-model.load_weights("G:/generator_weights_epoch_5.h5")
-MODEL=model
-# MODEL.summary()
-generated_image = 0.5 * MODEL.predict(images) + 0.5
+    generated_image_plot.axis('off')
+    original_side_face_image_plot.axis('off')
 
-plt.imshow(generated_image[0])
-plt.show()
+    number += 1
+
+    # plt.show()
+    
+    # Check folder presence
+    if not os.path.isdir(save_path):
+        os.makedirs(save_path)
+
+    save_name = 'Testing%d.png' % (number)
+    save_name = os.path.join(save_path, save_name)
+
+    plt.savefig(save_name)
+    plt.close()
