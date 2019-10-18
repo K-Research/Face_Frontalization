@@ -188,7 +188,7 @@ class Autoencoder():
             plt.savefig(save_name)
             plt.close()
 
-     self.number = 0
+        self.number = 1
 
     def graph(self, history, save_path):
         plt.plot(self.history[:, 2])     
@@ -199,10 +199,7 @@ class Autoencoder():
         plt.title('Generative adversarial network')
         plt.legend(['Accuracy of discriminator', 'Loss of discriminator', 'Loss of generator'], loc = 'upper left')
 
-        figure = plt.gcf()
-
-        # plt.show()
-
+        figure = plt.gcf()   
         save_path = save_path
 
         # Check folder presence
