@@ -7,6 +7,7 @@ from keras.preprocessing.image import load_img, img_to_array
 from keras.optimizers import Adam
 from keras.applications.vgg19 import VGG19
 import keras.backend as K
+
 # AI Model
 class VGG_LOSS(object):
     def __init__(self, image_shape):
