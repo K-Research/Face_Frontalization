@@ -1,6 +1,6 @@
 from glob import glob
 import cv2
-from crop_img import crop_progress
+from image_crop import crop_progress
 import numpy as np
 
 path = "d:/Selected_Img"
