@@ -13,7 +13,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 99
+time = 100
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
