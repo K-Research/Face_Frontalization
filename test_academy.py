@@ -14,7 +14,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 106
+time = 107
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 128X128X3 X_train/*jpg')
@@ -34,8 +34,7 @@ class GAN():
         self.width = 128
         self.channels = 3
 
-        self.combine_optimizer = Adam(lr = 0.002, beta_1 = 0.9, beta_2 = 0.999)
-        self.discriminator_optimizer = Adam(lr = 0.00002, beta_1 = 0.9, beta_2 = 0.999)
+        self.optimizer = Adam(lr = 1e-4, beta_1 = 0.9, beta_2 = 0.999)
 
         self.vgg16 = self.build_vgg16()
 
@@ -46,7 +45,7 @@ class GAN():
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.discriminator_optimizer, metrics = ['accuracy'])
+        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
 
         # Build and compile the generator
         self.generator = self.build_generator()
@@ -74,7 +73,7 @@ class GAN():
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
         self.combined = Model(z, [image, valid])
-        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.combine_optimizer)
+        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
         
@@ -107,7 +106,7 @@ class GAN():
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.5)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
@@ -131,19 +130,19 @@ class GAN():
         discriminator_layer = Conv2D(filters = 32, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_input)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Conv2D(filters = 1024, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Flatten()(discriminator_layer)
 
