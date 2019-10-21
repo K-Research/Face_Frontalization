@@ -24,7 +24,7 @@ epochs = 100
 batch_size = 16
 save_interval = 1
 
-class Autoencoder():
+class GAN():
     def __init__(self):
         # Load data
         self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
@@ -291,5 +291,5 @@ class Autoencoder():
         plt.close()
 
 if __name__ == '__main__':
-    autoencoder = Autoencoder()
-    autoencoder.train(epochs = epochs, batch_size = batch_size, save_interval = save_interval)
+    gan = GAN()
+    gan.train(epochs = epochs, batch_size = batch_size, save_interval = save_interval)
