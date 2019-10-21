@@ -6,17 +6,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-time = 1
+time = 2
 
 batch_size = 128
 save_path = 'D:/Generated Image/Testing' + str(time) + '/'
 number = 1
 
-X = glob('D:/Test image/*jpg')
+X = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Test image/*jpg')
 
 datagenerator = DataGenerator(X, batch_size = batch_size)
 
-generator = load_model('D:/generator_epoch_10.h5')
+generator = load_model('D:/generator_epoch_30.h5')
 
 for i in range(datagenerator.__len__()):
     side_image = datagenerator.__getitem__(i)
@@ -30,7 +30,7 @@ for i in range(datagenerator.__len__()):
 
         for k in range(1):
             original_side_face_image_plot = plt.subplot(1, 2, 1)
-            original_side_face_image_plot.set_title('Origninal front image')
+            original_side_face_image_plot.set_title('Origninal side image')
             original_side_face_image_plot.imshow(side_image[j])
 
             generated_image_plot = plt.subplot(1, 2, 2)
