@@ -14,7 +14,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 103
+time = 104
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -73,7 +73,7 @@ class Autoencoder():
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, valid)
+        self.combined = Model(z, [image, valid])
         self.combined.compile(loss = 'binary_crossentropy', optimizer = self.combine_optimizer)
 
         # self.combined.summary()
@@ -126,15 +126,38 @@ class Autoencoder():
         return generator
 
     def build_discriminator(self):
-        discriminator_input = self.vgg16.get_layer('pool5').output
-
-        discriminator_layer = Conv2D(filters = 1024, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(discriminator_input)
-        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        discriminator_input = Input(shape = (self.height, self.width, self.channels))
+        
+        discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(discriminator_input)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Flatten()(discriminator_layer)
+        discriminator_layer = Dense(units = 1024)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
 
-        discriminator_output = Conv2D(filters = 1, kernel_size = (4, 4), strides = (1, 1), padding = 'valid', activation = 'sigmoid', use_bias = False)(discriminator_layer)
+        discriminator_output = Dense(units = 1, activation = 'sigmoid')(discriminator_layer)
 
-        discriminator = Model(inputs = self.vgg16.input, outputs = discriminator_output)
+        discriminator = Model(inputs = discriminator_input, outputs = discriminator_output)
 
         # discriminator.summary()
 
@@ -142,8 +165,10 @@ class Autoencoder():
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
-        fake = np.zeros((batch_size, 1, 1, 1))
-        real = np.ones((batch_size, 1, 1, 1))
+        # fake = np.zeros((batch_size, 1))
+        # real = np.ones((batch_size, 1))
+        fake = np.random.random_sample((batch_size, 1)) * 0.2
+        real = np.ones((batch_size, 1)) - np.random.random_sample((batch_size, 1)) * 0.2
 
         print('Training')
 
@@ -164,13 +189,13 @@ class Autoencoder():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, real)
+                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
+                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
+                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
