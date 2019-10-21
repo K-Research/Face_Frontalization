@@ -13,13 +13,13 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 1
+time = 2
 
 # Load data
 X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Korean 224X224X3 filtering/Y/*jpg')
 
-epochs = 1000
+epochs = 100
 batch_size = 32
 save_interval = 1
 
@@ -128,7 +128,7 @@ class Autoencoder():
             self.datagenerator.on_epoch_end()
 
             # Save .h5
-            if k % 5 == 0:
+            if k % save_interval == 0:
                 # Check folder presence
                 if not os.path.isdir(self.save_path + 'H5/'):
                     os.makedirs(self.save_path + 'H5/')
