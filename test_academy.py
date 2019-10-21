@@ -14,14 +14,14 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 104
+time = 106
 
 # Load data
-X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
-Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
+X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 128X128X3 X_train/*jpg')
+Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 128X128X3 Y_train/*jpg')
 
-epochs = 100
-batch_size = 16
+epochs = 1000
+batch_size = 32
 save_interval = 1
 
 class GAN():
@@ -30,8 +30,8 @@ class GAN():
         self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
 
         # Prameters
-        self.height = 224
-        self.width = 224
+        self.height = 128
+        self.width = 128
         self.channels = 3
 
         self.combine_optimizer = Adam(lr = 0.002, beta_1 = 0.9, beta_2 = 0.999)
@@ -97,7 +97,7 @@ class GAN():
         generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
@@ -128,32 +128,24 @@ class GAN():
     def build_discriminator(self):
         discriminator_input = Input(shape = (self.height, self.width, self.channels))
         
-        discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(discriminator_input)
+        discriminator_layer = Conv2D(filters = 32, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_input)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 1024, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Flatten()(discriminator_layer)
-        discriminator_layer = Dense(units = 1024)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
 
         discriminator_output = Dense(units = 1, activation = 'sigmoid')(discriminator_layer)
 
@@ -192,7 +184,7 @@ class GAN():
                 generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
 
                 # Plot the progress
-                print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
+                print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.10f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
                         % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
                 record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
