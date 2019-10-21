@@ -13,13 +13,13 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 100
+time = 101
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
-epochs = 1000
+epochs = 100
 batch_size = 32
 save_interval = 1
 
@@ -33,7 +33,8 @@ class Autoencoder():
         self.width = 224
         self.channels = 3
 
-        self.optimizer = Adam(lr = 0.001, beta_1 = 0.9, beta_2 = 0.999)
+        self.discriminator_optimizer = Adam(lr = 0.00002, beta_1 = 0.9, beta_2 = 0.999)
+        self.combine_optimizer = Adam(lr = 0.002, beta_1 = 0.9, beta_2 = 0.999)
 
         self.vgg16 = self.build_vgg16()
 
@@ -42,12 +43,15 @@ class Autoencoder():
         self.number = 1
         self.save_path = 'D:/Generated Image/Training' + str(time) + '/'
 
-        # Build and compile the autoencoder
-        self.autoencoder = self.build_autoencoder()
-        self.autoencoder.compile(loss = 'mse', optimizer = self.optimizer)
+        # Build and compile the discriminator
+        self.discriminator = self.build_discriminator()
+        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.discriminator_optimizer, metrics = ['accuracy'])
+
+        # Build and compile the generator
+        self.generator = self.build_generator()
 
         # Save .json
-        generator_model_json = self.autoencoder.to_json()
+        generator_model_json = self.generator.to_json()
 
         # Check folder presence
         if not os.path.isdir(self.save_path + 'Json/'):
@@ -55,6 +59,23 @@ class Autoencoder():
 
         with open(self.save_path + 'Json/generator_model.json', "w") as json_file : 
             json_file.write(generator_model_json)
+
+        # The generator takes noise as input and generates imgs
+        z = Input(shape = (self.height, self.width, self.channels))
+        image = self.generator(z)
+
+        # For the combined model we will only train the generator
+        self.discriminator.trainable = False
+
+        # The discriminator takes generated images as input and determines validiy
+        valid = self.discriminator(image)
+
+        # The combined model  (stacked generator and discriminator)
+        # Trains the generator to fool the discriminator
+        self.combined = Model(z, valid)
+        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.combine_optimizer)
+
+        # self.combined.summary()
 
     def build_vgg16(self):
         vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
@@ -69,7 +90,7 @@ class Autoencoder():
 
         return vgg16
 
-    def build_autoencoder(self):
+    def build_generator(self):
         generator_input = self.vgg16.get_layer('pool5').output
 
         generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_input)
@@ -103,38 +124,85 @@ class Autoencoder():
 
         return generator
 
+    def build_discriminator(self):
+        discriminator_input = Input(shape = (self.height, self.width, self.channels))
+
+        discriminator_layer = Conv2D(filters = 16, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_input)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 32, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+
+        discriminator_output = Conv2D(filters = 1, kernel_size = (2, 2), strides = (2, 2), padding = 'same', activation = 'sigmoid', use_bias = False)(discriminator_layer)
+
+        discriminator = Model(inputs = discriminator_input, outputs = discriminator_output)
+
+        discriminator.summary()
+
+        return discriminator
+
     def train(self, epochs, batch_size, save_interval):
+        # Adversarial ground truths
+        fake = np.zeros((batch_size, 1, 1, 1))
+        real = np.ones((batch_size, 1, 1, 1))
+
         print('Training')
 
         for k in range(1, epochs + 1):
             for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
                 # Select images
                 side_image, front_image = self.datagenerator.__getitem__(l - 1)
+
+                generated_image = self.generator.predict(side_image)
+
+                self.discriminator.trainable = True
+
+                # Train the discriminator (real classified as ones and generated as zeros)
+                discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
+                discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
+                discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
                 
-                # Train the autoencoder (real classified as ones and generated as zeros)
-                autoencoer_loss = self.autoencoder.train_on_batch(side_image, front_image)
-                
+                self.discriminator.trainable = False
+
+                # Train the generator (wants discriminator to mistake images as real)
+                generator_loss = self.combined.train_on_batch(side_image, real)
+
                 # Plot the progress
-                print ('\nTraining epoch : %d \nTraining batch : %d \nLoss of autoencoder : %f ' % (k, l, autoencoer_loss))
+                print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
+                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
-                record = (k, l, autoencoer_loss)
-
+                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
-                if l % 1 == 0:
+                if l % save_interval == 0:
                     self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
             # Save .h5
-            if k % 5 == 0:
+            if k % save_interval == 0:
                 # Check folder presence
                 if not os.path.isdir(self.save_path + 'H5/'):
                     os.makedirs(self.save_path + 'H5/')
 
-                self.autoencoder.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % k)
-                self.autoencoder.save_weights(self.save_path + 'H5/' + 'generator_weights_epoch_%d.h5' % k)
+                self.generator.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % k)
+                self.generator.save_weights(self.save_path + 'H5/' + 'generator_weights_epoch_%d.h5' % k)
 
         self.history = np.array(self.history)
 
@@ -142,7 +210,7 @@ class Autoencoder():
 
     def save_image(self, front_image, side_image, epoch_number, batch_number, save_path):
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.autoencoder.predict(side_image) + 0.5
+        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
