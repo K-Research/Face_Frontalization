@@ -14,14 +14,14 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 102
+time = 103
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 epochs = 100
-batch_size = 32
+batch_size = 16
 save_interval = 1
 
 class Autoencoder():
@@ -46,7 +46,7 @@ class Autoencoder():
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.combine_optimizer, metrics = ['accuracy'])
+        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.discriminator_optimizer, metrics = ['accuracy'])
 
         # Build and compile the generator
         self.generator = self.build_generator()
@@ -74,7 +74,7 @@ class Autoencoder():
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
         self.combined = Model(z, valid)
-        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.discriminator_optimizer)
+        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.combine_optimizer)
 
         # self.combined.summary()
         
@@ -126,32 +126,15 @@ class Autoencoder():
         return generator
 
     def build_discriminator(self):
-        discriminator_input = Input(shape = (self.height, self.width, self.channels))
+        discriminator_input = self.vgg16.get_layer('pool5').output
 
-        discriminator_layer = Conv2D(filters = 16, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_input)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 32, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 1024, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(discriminator_input)
+        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
 
-        discriminator_output = Conv2D(filters = 1, kernel_size = (2, 2), strides = (2, 2), padding = 'same', activation = 'sigmoid', use_bias = False)(discriminator_layer)
+        discriminator_output = Conv2D(filters = 1, kernel_size = (4, 4), strides = (1, 1), padding = 'valid', activation = 'sigmoid', use_bias = False)(discriminator_layer)
 
-        discriminator = Model(inputs = discriminator_input, outputs = discriminator_output)
+        discriminator = Model(inputs = self.vgg16.input, outputs = discriminator_output)
 
         # discriminator.summary()
 
