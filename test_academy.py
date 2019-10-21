@@ -34,7 +34,8 @@ class Autoencoder():
         self.width = 224
         self.channels = 3
 
-        self.optimizer = Adam(lr = 1e-4, beta_1 = 0.9, beta_2 = 0.999, epsilon = 1e-08)
+        self.combine_optimizer = Adam(lr = 0.002, beta_1 = 0.9, beta_2 = 0.999)
+        self.discriminator_optimizer = Adam(lr = 0.00002, beta_1 = 0.9, beta_2 = 0.999)
 
         self.vgg16 = self.build_vgg16()
 
@@ -45,11 +46,10 @@ class Autoencoder():
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
+        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.combine_optimizer, metrics = ['accuracy'])
 
         # Build and compile the generator
         self.generator = self.build_generator()
-        self.generator.compile(loss = self.kullback_leibler_divergence, optimizer = self.optimizer)
 
         # Save .json
         generator_model_json = self.generator.to_json()
@@ -73,17 +73,11 @@ class Autoencoder():
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, [image, valid])
-        self.combined.compile(loss = [self.kullback_leibler_divergence, 'binary_crossentropy'], loss_weights=[1., 1e-3], optimizer = self.optimizer)
+        self.combined = Model(z, valid)
+        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.discriminator_optimizer)
 
         # self.combined.summary()
-
-    def kullback_leibler_divergence(self, y_true, y_pred):
-        y_true = K.clip(y_true, K.epsilon(), 1)
-        y_pred = K.clip(y_pred, K.epsilon(), 1)
-
-        return K.sum(y_true * K.log(y_true / y_pred), axis=-1)
-
+        
     def build_vgg16(self):
         vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
         # Make trainable as False
@@ -134,22 +128,28 @@ class Autoencoder():
     def build_discriminator(self):
         discriminator_input = Input(shape = (self.height, self.width, self.channels))
 
-        discriminator_layer = Conv2D(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(discriminator_input)
+        discriminator_layer = Conv2D(filters = 16, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_input)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 32, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
         discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
         discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
         discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(discriminator_layer)
         discriminator_layer = BatchNormalization(momentum = 0.1, epsilon = 1e-5)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
 
-        discriminator_output = Conv2D(filters = 1, kernel_size = (4, 4), strides = (2, 2), padding = 'valid', activation = 'sigmoid', use_bias = False)(discriminator_layer)
+        discriminator_output = Conv2D(filters = 1, kernel_size = (2, 2), strides = (2, 2), padding = 'same', activation = 'sigmoid', use_bias = False)(discriminator_layer)
 
         discriminator = Model(inputs = discriminator_input, outputs = discriminator_output)
 
@@ -181,13 +181,13 @@ class Autoencoder():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
+                generator_loss = self.combined.train_on_batch(side_image, real)
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
-                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
