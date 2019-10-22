@@ -122,8 +122,8 @@ class Autoencoder():
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
-                if l % 1 == 0:
-                    self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
+                # if l % 1 == 0:
+                #     selfn.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
@@ -192,8 +192,6 @@ class Autoencoder():
 
     def graph(self, history, save_path):
         plt.plot(self.history[:, 2])     
-        plt.plot(self.history[:, 3])
-        plt.plot(self.history[:, 4])
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.title('Generative adversarial network')
