@@ -267,7 +267,7 @@ class DCGAN():
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
 
-        # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
+        # Show image (first column : original side image, second column : original front image, third column : generated image(front image))
         for m in range(batch_size):
             plt.figure(figsize = (8, 2))
 

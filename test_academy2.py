@@ -127,8 +127,7 @@ class Autoencoder():
             # If at save interval -> save generated image samples
             if k % save_interval == 0:
                 test_image = self.datagenerator_predict.__getitem__(l - 1)        
-                test_generated_image = self.autoencoder.predict(test_image)   
-                self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
+                self.save_test_image(side_image = test_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
@@ -145,14 +144,14 @@ class Autoencoder():
 
         self.graph(history = self.history, save_path = self.save_path + 'History/')
 
-    def save_image(self, front_image, side_image, epoch_number, batch_number, save_path):
+    def save_train_image(self, front_image, side_image, epoch_number, batch_number, save_path):
         # Rescale images 0 - 1
         generated_image = 0.5 * self.autoencoder.predict(side_image) + 0.5
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
 
-        # Show image (first column : original side image, second column : original front image, third column = generated image(front image))
+        # Show image (first column : original side image, second column : original front image, third column : generated image(front image))
         for m in range(batch_size):
             plt.figure(figsize = (8, 2))
 
@@ -188,6 +187,50 @@ class Autoencoder():
                 os.makedirs(save_path)
 
             save_name = 'Train%d_Batch%d_%d.png' % (epoch_number, batch_number, self.number)
+            save_name = os.path.join(save_path, save_name)
+        
+            plt.savefig(save_name)
+            plt.close()
+
+        self.number = 1
+
+    def save_test_image(self, front_image, side_image, epoch_number, batch_number, save_path):
+        # Rescale images 0 - 1
+        generated_image = 0.5 * self.autoencoder.predict(side_image) + 0.5
+
+        side_image = (127.5 * (side_image + 1)).astype(np.uint8)
+
+        # Show image (first column : original side image, second column : generated image(front image))
+        for m in range(batch_size):
+            plt.figure(figsize = (8, 2))
+
+            # Adjust the interval of the image
+            plt.subplots_adjust(wspace = 0.6)
+
+            for n in range(self.n_show_image):
+                generated_image_plot = plt.subplot(1, 3, n + 1 + self.n_show_image)
+                generated_image_plot.set_title('Generated image (front image)')
+                plt.imshow(generated_image[m,  :  ,  :  ,  : ])
+
+                original_side_face_image_plot = plt.subplot(1, 3, n + 1)
+                original_side_face_image_plot.set_title('Origninal side image')
+                plt.imshow(side_image[m])
+
+                # Don't show axis of x and y
+                generated_image_plot.axis('off')
+                original_side_face_image_plot.axis('off')
+
+                self.number += 1
+
+                # plt.show()
+
+            save_path = save_path
+
+            # Check folder presence
+            if not os.path.isdir(save_path):
+                os.makedirs(save_path)
+
+            save_name = 'Test%d_Batch%d_%d.png' % (epoch_number, batch_number, self.number)
             save_name = os.path.join(save_path, save_name)
         
             plt.savefig(save_name)
