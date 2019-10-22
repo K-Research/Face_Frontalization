@@ -4,7 +4,7 @@ from datagenerator_read_dir_face import DataGenerator
 from glob import glob
 import keras.backend as K
 from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
-from keras.layers.advanced_activations import LeakyReLU
+from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
 from keras_vggface.vggface import VGGFace
@@ -14,13 +14,13 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 107
+time = 1
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 128X128X3 X_train/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 128X128X3 Y_train/*jpg')
 
-epochs = 1000
+epochs = 100
 batch_size = 64
 save_interval = 1
 
@@ -76,6 +76,21 @@ class GAN():
         self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
+
+    def residual_block(self, model, filters, kernel_size, strides):
+        residual_input = model
+
+        residual_layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'valid')(residual_input)
+        residual_layer = BatchNormalization(momentum = 0.5)(residual_layer)
+
+        # Using Parametric ReLU
+        residual_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(residual_layer)
+        residual_layer = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'valid')(residual_layer)
+        residual_output = BatchNormalization(momentum = 0.5)(residual_layer)
+
+        residual_model = add([residual_input, residual_output])
+
+        return residual_model
         
     def build_vgg16(self):
         vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
@@ -120,7 +135,7 @@ class GAN():
 
         generator = Model(inputs = self.vgg16.input, outputs = generator_output)
 
-        # generator.summary()
+        generator.summary()
 
         return generator
 
