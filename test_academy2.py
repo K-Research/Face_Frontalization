@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 
-from datagenerator_read_dir_face import DataGenerator
+from datagenerator_read_dir_face import DataGenerator, DataGenerator_predict
 from glob import glob
 from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU
@@ -13,11 +13,13 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 2
+time = 3
 
 # Load data
 X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Korean 224X224X3 filtering/Y/*jpg')
+
+X_test = glob('D:/Test image/*jpg')
 
 epochs = 100
 batch_size = 32
@@ -27,6 +29,7 @@ class Autoencoder():
     def __init__(self):
         # Load data
         self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
+        self.datagenerator_predict = DataGenerator_predict(X_test, batch_size = batch_size)
 
         # Prameters
         self.height = 224
@@ -121,9 +124,11 @@ class Autoencoder():
 
                 self.history.append(record)
 
-                # If at save interval -> save generated image samples
-                # if l % 1 == 0:
-                #     selfn.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
+            # If at save interval -> save generated image samples
+            if k % save_interval == 0:
+                test_image = self.datagenerator_predict.__getitem__(l - 1)        
+                test_generated_image = self.autoencoder.predict(test_image)   
+                self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
