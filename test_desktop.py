@@ -171,7 +171,7 @@ class DCGAN():
 
         print('Training')
 
-        for k in range(epochs):
+        for k in range(1, epochs + 1):
             for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
                 # Select images
                 side_image, front_image = self.datagenerator.__getitem__(l - 1)
