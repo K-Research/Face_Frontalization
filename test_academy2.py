@@ -223,7 +223,7 @@ class Autoencoder():
 
                 self.number += 1
 
-                plt.show()
+                # plt.show()
 
             save_path = save_path
 
