@@ -126,10 +126,11 @@ class Autoencoder():
 
             # If at save interval -> save generated image samples
             if k % save_interval == 0:
-                test_image = self.datagenerator_predict.__getitem__(l - 1)        
+                test_image = self.datagenerator_predict.__getitem__(k - 1)        
                 self.save_test_image(side_image = test_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
+            self.datagenerator_predict.on_epoch_end()
 
             # Save .h5
             if k % save_interval == 0:
@@ -202,17 +203,17 @@ class Autoencoder():
 
         # Show image (first column : original side image, second column : generated image(front image))
         for m in range(batch_size):
-            plt.figure(figsize = (8, 2))
+            plt.figure(figsize = (6, 2))
 
             # Adjust the interval of the image
             plt.subplots_adjust(wspace = 0.6)
 
             for n in range(self.n_show_image):
-                generated_image_plot = plt.subplot(1, 3, n + 1 + self.n_show_image)
+                generated_image_plot = plt.subplot(1, 2, n + 1 + self.n_show_image)
                 generated_image_plot.set_title('Generated image (front image)')
                 plt.imshow(generated_image[m,  :  ,  :  ,  : ])
 
-                original_side_face_image_plot = plt.subplot(1, 3, n + 1)
+                original_side_face_image_plot = plt.subplot(1, 2, n + 1)
                 original_side_face_image_plot.set_title('Origninal side image')
                 plt.imshow(side_image[m])
 
@@ -222,7 +223,7 @@ class Autoencoder():
 
                 self.number += 1
 
-                # plt.show()
+                plt.show()
 
             save_path = save_path
 
