@@ -194,7 +194,7 @@ class Autoencoder():
 
         self.number = 1
 
-    def save_test_image(self, front_image, side_image, epoch_number, batch_number, save_path):
+    def save_test_image(self, side_image, epoch_number, batch_number, save_path):
         # Rescale images 0 - 1
         generated_image = 0.5 * self.autoencoder.predict(side_image) + 0.5
 
