@@ -3,7 +3,7 @@ from __future__ import print_function, division
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
 import keras.backend as K
-from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
@@ -135,7 +135,7 @@ class GAN():
 
         generator = Model(inputs = self.vgg16.input, outputs = generator_output)
 
-        generator.summary()
+        # generator.summary()
 
         return generator
 

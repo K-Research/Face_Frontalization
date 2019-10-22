@@ -16,8 +16,8 @@ from tqdm import tqdm
 time = 1
 
 # Load data
-X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
-Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
+X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
+Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 train_epochs = 1000
 batch_size = 1
@@ -195,16 +195,17 @@ class DCGAN():
                         % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
                 record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+            
                 self.history.append(record)
+
+                # If at save interval -> save generated image samples
+                if l % save_interval == 0:
+                    self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
-            # If at save interval -> save generated image samples
-            if k % save_interval == 0:
-                self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
-
             # Save .h5
-            if k % 5 == 0:
+            if k % save_interval == 0:
                 # Check folder presence
                 if not os.path.isdir(self.save_path + 'H5/'):
                     os.makedirs(self.save_path + 'H5/')
