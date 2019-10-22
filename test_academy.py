@@ -21,7 +21,7 @@ X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 128X128X
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 128X128X3 Y_train/*jpg')
 
 epochs = 1000
-batch_size = 32
+batch_size = 64
 save_interval = 1
 
 class GAN():
@@ -129,21 +129,25 @@ class GAN():
         
         discriminator_layer = Conv2D(filters = 32, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_input)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
         discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
         discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
         discriminator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 1024, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
+        # discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
+        # discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        # discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        # discriminator_layer = Conv2D(filters = 1024, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
+        # discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        # discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Flatten()(discriminator_layer)
 
         discriminator_output = Dense(units = 1, activation = 'sigmoid')(discriminator_layer)
