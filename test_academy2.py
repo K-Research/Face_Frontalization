@@ -13,7 +13,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 3
+time = 4
 
 # Load data
 X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
