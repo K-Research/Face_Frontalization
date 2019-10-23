@@ -199,13 +199,15 @@ class DCGAN():
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
-                if l % save_interval == 0:
-                    self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
+                # if l % save_interval == 0:
+                #     self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
-            # Save .h5
+            # Save generated images and .h5
             if k % save_interval == 0:
+                self.save_image(front_image = front_image, side_image = side_image, train_number = k, epoch_number = l, save_path = self.save_path)
+
                 # Check folder presence
                 if not os.path.isdir(self.save_path + 'H5/'):
                     os.makedirs(self.save_path + 'H5/')
