@@ -19,7 +19,7 @@ time = 2
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
-train_epochs = 1000
+epochs = 100
 batch_size = 32
 save_interval = 1
 
@@ -296,4 +296,4 @@ class DCGAN():
 
 if __name__ == '__main__':
     dcgan = DCGAN()
-    dcgan.train(epochs = train_epochs, batch_size = batch_size, save_interval = save_interval)
+    dcgan.train(epochs = epochs, batch_size = batch_size, save_interval = save_interval)
