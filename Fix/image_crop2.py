@@ -1,6 +1,6 @@
 from glob import glob
 import cv2
-from image_crop import crop_progress
+from crop_img import crop_progress
 import numpy as np
 
 path = "d:/Selected_Img"
@@ -26,12 +26,12 @@ for img in imgs:
     # print(temp)
     img_name = img[temp+1:]
     # print(img_name)
-    person, l, c = img_name.split('.')[0].split('-')
-    front_img_name = path + "/" + person + "-02-07.jpg"
+    person, s, e, l, c = img_name.split('.')[0].split('-')
+    front_img_name = path + "/" + person + "001-01-02-07.jpg"
     # print(front_img_name)
     front_image = cv2.imread(front_img_name, cv2.IMREAD_COLOR)
     crop_front_img = crop_progress(front_image)
-    print(person, l, c)
+    print(person, s, e, l, c)
     img = img[:temp] +'/'+ img_name
     print(img)
     if c == '07':
