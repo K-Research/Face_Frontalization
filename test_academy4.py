@@ -1,8 +1,7 @@
 from __future__ import print_function, division
 
-from datagenerator_read_dir_face import DataGenerator
+from datagenerator_read_dir_face import DataGenerator, DataGenerator_predict
 from glob import glob
-import keras.backend as K
 from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
@@ -14,14 +13,16 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 1
+time = 5
 
 # Load data
-X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 128X128X3 X_train/*jpg')
-Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 128X128X3 Y_train/*jpg')
+X_train = glob('D:/Korean 224X224X3 filtering/X/*jpg')
+Y_train = glob('D:/Korean 224X224X3 filtering/Y/*jpg')
+
+X_test = glob('D:/Test image/*jpg')
 
 epochs = 100
-batch_size = 64
+batch_size = 32
 save_interval = 1
 
 class GAN():
@@ -30,8 +31,8 @@ class GAN():
         self.datagenerator = DataGenerator(X_train, Y_train, batch_size = batch_size)
 
         # Prameters
-        self.height = 128
-        self.width = 128
+        self.height = 224
+        self.width = 224
         self.channels = 3
 
         self.optimizer = Adam(lr = 1e-4, beta_1 = 0.9, beta_2 = 0.999)
@@ -76,6 +77,21 @@ class GAN():
         self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
+
+    def residual_block(self, layer, filters, kernel_size, strides):
+        residual_input = layer
+
+        residual_layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(residual_input)
+        residual_layer = BatchNormalization(momentum = 0.5)(residual_layer)
+
+        # Using Parametric ReLU
+        residual_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(residual_layer)
+        residual_layer = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'same')(residual_layer)
+        residual_output = BatchNormalization(momentum = 0.5)(residual_layer)
+
+        residual_model = add([residual_input, residual_output])
+
+        return residual_model
         
     def build_vgg16(self):
         vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
@@ -93,45 +109,40 @@ class GAN():
     def build_generator(self):
         generator_input = self.vgg16.get_layer('pool5').output
 
-        generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_input)
+        residual_input = self.vgg16.get_layer('conv3_3').output
+
+        for i in range(16):
+            residual_layer = self.residual_block(residual_input, filters = 256, kernel_size = (3, 3), strides = (1, 1))
+
+        generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
+
+        generator_layer = add([generator_layer, residual_layer])
+
+        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.5)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (1, 1), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'valid')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (5, 5), strides = (1, 1), padding = 'valid')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
 
         generator_output = Activation('tanh')(generator_layer)
 
         generator = Model(inputs = self.vgg16.input, outputs = generator_output)
 
-        # generator.summary()
+        generator.summary()
 
         return generator
 
     def build_discriminator(self):
         discriminator_input = Input(shape = (self.height, self.width, self.channels))
         
-        discriminator_layer = Conv2D(filters = 32, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_input)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_input)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
         discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
@@ -142,12 +153,10 @@ class GAN():
         discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
         discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
         discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
-        # discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        # discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
-        # discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        # discriminator_layer = Conv2D(filters = 1024, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_layer)
-        # discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
-        # discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
         discriminator_layer = Flatten()(discriminator_layer)
 
         discriminator_output = Dense(units = 1, activation = 'sigmoid')(discriminator_layer)
@@ -193,14 +202,16 @@ class GAN():
                 record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
-                # If at save interval -> save generated image samples
-                if l % save_interval == 0:
-                    self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
+                # # If at save interval -> save generated image samples
+                # if l % save_interval == 0:
+                #     self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
-            # Save .h5
+            # Save generated images and .h5
             if k % save_interval == 0:
+                self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
+
                 # Check folder presence
                 if not os.path.isdir(self.save_path + 'H5/'):
                     os.makedirs(self.save_path + 'H5/')
