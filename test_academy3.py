@@ -2,8 +2,8 @@ from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
-from keras.layers import Activation, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
-from keras.layers.advanced_activations import LeakyReLU
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
+from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
 from keras_vggface.vggface import VGGFace
@@ -13,7 +13,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 2
+time = 3
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -77,14 +77,29 @@ class DCGAN():
 
         # self.combined.summary()
 
+    def residual_block(self, layer, filters, kernel_size, strides):
+        residual_input = layer
+
+        residual_layer = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(residual_input)
+        residual_layer = BatchNormalization(momentum = 0.5)(residual_layer)
+
+        # Using Parametric ReLU
+        residual_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(residual_layer)
+        residual_layer = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'same')(residual_layer)
+        residual_output = BatchNormalization(momentum = 0.5)(residual_layer)
+
+        residual_model = add([residual_input, residual_output])
+
+        return residual_model
+
     def build_vgg16(self):
         vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
         # Make trainable as False
 
         vgg16.trainable = False
 
-        for layer in vgg16.layers:
-            layer.trainable = False
+        for i in vgg16.layers:
+            i.trainable = False
 
         # vgg16.summary()
 
@@ -93,9 +108,18 @@ class DCGAN():
     def build_generator(self):
         generator_input = self.vgg16.get_layer('pool5').output
 
+        residual_input = self.vgg16.get_layer('conv5_3').output
+
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+
+        for j in range(16):
+            residual_layer = self.residual_block(residual_input, filters = 512, kernel_size = (3, 3), strides = (1, 1))
+
+        generator_layer = add([generator_layer, residual_layer])
+
+
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
@@ -111,7 +135,7 @@ class DCGAN():
 
         generator = Model(inputs = self.vgg16.input, outputs = generator_output)
 
-        # generator.summary()
+        generator.summary()
 
         return generator
 
