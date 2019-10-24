@@ -13,7 +13,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 3
+time = 5
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -190,8 +190,10 @@ class DCGAN():
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
-        fake = np.zeros((batch_size, 1))
-        real = np.ones((batch_size, 1))
+        # fake = np.zeros((batch_size, 1))
+        # real = np.ones((batch_size, 1))
+        fake = np.random.random_sample((batch_size, 1)) * 0.2
+        real = np.ones((batch_size, 1)) - np.random.random_sample((batch_size, 1)) * 0.2
 
         print('Training')
 
