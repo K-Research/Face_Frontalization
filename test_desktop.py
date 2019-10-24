@@ -20,7 +20,7 @@ X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius
 Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 epochs = 100
-batch_size = 64
+batch_size = 32
 save_interval = 1
 
 class GAN():
