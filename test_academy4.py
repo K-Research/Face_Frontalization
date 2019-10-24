@@ -99,8 +99,8 @@ class GAN():
 
         vgg16.trainable = False
 
-        for layer in vgg16.layers:
-            layer.trainable = False
+        for i in vgg16.layers:
+            i.trainable = False
 
         # vgg16.summary()
 
@@ -111,7 +111,7 @@ class GAN():
 
         residual_input = self.vgg16.get_layer('conv3_3').output
 
-        for i in range(16):
+        for j in range(16):
             residual_layer = self.residual_block(residual_input, filters = 256, kernel_size = (3, 3), strides = (1, 1))
 
         generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
