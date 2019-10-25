@@ -20,7 +20,7 @@ X_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius
 Y_train = glob('D:/Taehwan Kim/Document/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 epochs = 100
-batch_size = 64
+batch_size = 32
 save_interval = 1
 
 class GAN():
@@ -95,10 +95,10 @@ class GAN():
         vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
         # Make trainable as False
 
-        vgg16.trainable = False
+        i.trainable = False
 
-        for layer in vgg16.layers:
-            layer.trainable = False
+        for i in vgg16.layers:
+            i.trainable = False
 
         # vgg16.summary()
 
@@ -109,7 +109,7 @@ class GAN():
 
         residual_input = self.vgg16.get_layer('conv3_3').output
 
-        for i in range(16):
+        for j in range(16):
             residual_layer = self.residual_block(residual_input, filters = 256, kernel_size = (3, 3), strides = (1, 1))
 
         generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
