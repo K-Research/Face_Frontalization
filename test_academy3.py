@@ -2,7 +2,7 @@ from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
-from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
+from keras.layers import Activation, add, average, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
@@ -13,7 +13,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 5
+time = 7
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -101,31 +101,30 @@ class DCGAN():
         for i in vgg16.layers:
             i.trainable = False
 
-        # vgg16.summary()
+        vgg16.summary()
 
         return vgg16
 
     def build_generator(self):
         generator_input = self.vgg16.get_layer('pool5').output
 
-        residual_input = self.vgg16.get_layer('conv5_3').output
-
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        residual_input = self.vgg16.get_layer('conv3_3').output
 
         for j in range(16):
-            residual_layer = self.residual_block(residual_input, filters = 512, kernel_size = (3, 3), strides = (1, 1))
+            residual_layer = self.residual_block(residual_input, filters = 256, kernel_size = (3, 3), strides = (1, 1))
 
-        generator_layer = add([generator_layer, residual_layer])
-
-
+        generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+
+        generator_layer = average([generator_layer, residual_layer])
+
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
