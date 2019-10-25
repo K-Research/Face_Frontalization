@@ -2,7 +2,7 @@ from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
-from keras.layers import Activation, add, average, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape, ZeroPadding2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
@@ -13,14 +13,14 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 8
+time = 9
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 epochs = 100
-batch_size = 32
+batch_size = 64
 save_interval = 1
 
 class GAN():
@@ -87,7 +87,7 @@ class GAN():
         residual_layer = Conv2D(filters = filters, kernel_size = kernel_size, strides=strides, padding = 'same')(residual_layer)
         residual_output = BatchNormalization(momentum = 0.5)(residual_layer)
 
-        residual_model = average([residual_input, residual_output])
+        residual_model = add([residual_input, residual_output])
 
         return residual_model
         
@@ -109,9 +109,6 @@ class GAN():
 
         residual_input = self.vgg16.get_layer('conv3_3').output
 
-        for j in range(16):
-            residual_layer = self.residual_block(residual_input, filters = 256, kernel_size = (3, 3), strides = (1, 1))
-
         generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
@@ -122,7 +119,7 @@ class GAN():
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
 
-        generator_layer = average([generator_layer, residual_layer])
+        generator_layer = add([generator_layer, residual_input])
 
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
@@ -174,10 +171,10 @@ class GAN():
 
         print('Training')
 
-        for k in range(1, epochs + 1):
-            for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
+        for j in range(1, epochs + 1):
+            for k in tqdm(range(1, self.datagenerator.__len__() + 1)):
                 # Select images
-                side_image, front_image = self.datagenerator.__getitem__(l - 1)
+                side_image, front_image = self.datagenerator.__getitem__(k - 1)
 
                 generated_image = self.generator.predict(side_image)
 
@@ -195,20 +192,20 @@ class GAN():
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (j, k, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (j, k, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
                 # # If at save interval -> save generated image samples
                 # if l % save_interval == 0:
-                #     self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
+                #     self.save_image(front_image = front_image, side_image = side_image, epoch_number = j, batch_number = k, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
             # Save generated images and .h5
             if k % save_interval == 0:
-                self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
+                self.save_image(front_image = front_image, side_image = side_image, epoch_number = j, batch_number = k, save_path = self.save_path)
 
                 # Check folder presence
                 if not os.path.isdir(self.save_path + 'H5/'):
