@@ -13,7 +13,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 9
+time = 10
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -119,7 +119,7 @@ class GAN():
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
 
-        generator_layer = add([generator_layer, residual_input])
+        generator_layer = add([residual_input, generator_layer])
 
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
