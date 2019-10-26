@@ -20,7 +20,7 @@ X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 epochs = 100
-batch_size = 32
+batch_size = 16
 save_interval = 1
 
 class GAN():
@@ -221,7 +221,7 @@ class GAN():
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
                         % (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                print('\nAccuracy of discriminator : ', discriminator_loss[1])
+                print('\nAccuracy of discriminator : %.100f%%', discriminator_loss[1])
 
                 record = (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)

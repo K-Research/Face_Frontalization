@@ -13,7 +13,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 13
+time = 12
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -125,26 +125,19 @@ class GAN():
 
         # residual_input = self.vgg16.get_layer('conv3_3').output
 
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
+        generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
 
         # generator_layer = add([residual_input, generator_layer])
 
-        residual_layer = generator_layer
-
-        for k in range(16):
-            residual_layer = self.residual_block(layer = residual_layer, filters = 128, kernel_size = (3, 3), strides = (1, 1))
-
-        generator_layer = add([generator_layer, residual_layer])        
-
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
@@ -153,7 +146,7 @@ class GAN():
 
         generator = Model(inputs = self.vgg16.input, outputs = generator_output)
 
-        generator.summary()
+        # generator.summary()
 
         return generator
 
@@ -198,10 +191,10 @@ class GAN():
 
         print('Training')
 
-        for l in range(1, epochs + 1):
-            for m in tqdm(range(1, self.datagenerator.__len__() + 1)):
+        for k in range(1, epochs + 1):
+            for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
                 # Select images
-                side_image, front_image = self.datagenerator.__getitem__(l - 1)
+                side_image, front_image = self.datagenerator.__getitem__(k - 1)
 
                 generated_image = self.generator.predict(side_image)
 
@@ -219,22 +212,20 @@ class GAN():
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                print('\nAccuracy of discriminator : ', discriminator_loss[1])
-
-                record = (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
                 # # If at save interval -> save generated image samples
-                # if m % save_interval == 0:
-                #     self.save_image(front_image = front_image, side_image = side_image, epoch_number = l, batch_number = m, save_path = self.save_path)
+                # if l % save_interval == 0:
+                #     self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
             # Save generated images and .h5
-            if l % save_interval == 0:
-                self.save_image(front_image = front_image, side_image = side_image, epoch_number = l, batch_number = m, save_path = self.save_path)
+            if k % save_interval == 0:
+                self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
                 # Check folder presence
                 if not os.path.isdir(self.save_path + 'H5/'):
