@@ -153,7 +153,7 @@ class GAN():
 
         generator = Model(inputs = self.vgg16.input, outputs = generator_output)
 
-        generator.summary()
+        # generator.summary()
 
         return generator
 

@@ -153,7 +153,7 @@ class GAN():
 
         generator = Model(inputs = self.vgg16.input, outputs = generator_output)
 
-        generator.summary()
+        # generator.summary()
 
         return generator
 
@@ -220,8 +220,6 @@ class GAN():
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
                         % (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
-
-                print('\nAccuracy of discriminator : %.100f%%', discriminator_loss[1])
 
                 record = (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
