@@ -116,7 +116,7 @@ class GAN():
         for j in resnet50.layers:
             j.trainable = False
 
-        # resnet50.summary()
+        resnet50.summary()
 
         return resnet50
 
@@ -176,7 +176,7 @@ class GAN():
         
         discriminator_output = Dense(units = 1, activation = 'sigmoid')(discriminator_layer)
 
-        discriminator = Model(inputs = self.resnet50.output, outputs = discriminator_output)
+        discriminator = Model(inputs = self.resnet50.input, outputs = discriminator_output)
 
         # discriminator.summary()
 
