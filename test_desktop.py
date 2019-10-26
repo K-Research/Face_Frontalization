@@ -118,6 +118,8 @@ class GAN():
 
         # resnet50.summary()
 
+        return resnet50
+
     def build_generator(self):
         generator_input = self.vgg16.get_layer('pool5').output
 
