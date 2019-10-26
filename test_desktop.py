@@ -20,7 +20,7 @@ X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 epochs = 100
-batch_size = 64
+batch_size = 32
 save_interval = 1
 
 class GAN():
@@ -116,7 +116,7 @@ class GAN():
         for j in resnet50.layers:
             j.trainable = False
 
-        resnet50.summary()
+        # resnet50.summary()
 
         return resnet50
 
