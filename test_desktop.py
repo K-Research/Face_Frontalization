@@ -13,7 +13,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 10
+time = 11
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -36,6 +36,7 @@ class GAN():
         self.optimizer = Adam(lr = 1e-4, beta_1 = 0.9, beta_2 = 0.999)
 
         self.vgg16 = self.build_vgg16()
+        self.resnet50 = self.build_resnet50()
 
         self.n_show_image = 1 # Number of images to show
         self.history = []
@@ -93,6 +94,7 @@ class GAN():
         
     def build_vgg16(self):
         vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+
         # Make trainable as False
 
         vgg16.trainable = False
@@ -104,10 +106,22 @@ class GAN():
 
         return vgg16
 
+    def build_resnet50(self):
+        resnet50 = VGGFace(include_top = False, model = 'resnet50', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
+
+        # Make trainable as False
+
+        resnet50.trainable = False
+
+        for j in resnet50.layers:
+            j.trainable = False
+
+        # resnet50.summary()
+
     def build_generator(self):
         generator_input = self.vgg16.get_layer('pool5').output
 
-        residual_input = self.vgg16.get_layer('conv3_3').output
+        # residual_input = self.vgg16.get_layer('conv3_3').output
 
         generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
@@ -119,7 +133,7 @@ class GAN():
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
 
-        generator_layer = add([residual_input, generator_layer])
+        # generator_layer = add([residual_input, generator_layer])
 
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
@@ -135,28 +149,32 @@ class GAN():
         return generator
 
     def build_discriminator(self):
-        discriminator_input = Input(shape = (self.height, self.width, self.channels))
+        # discriminator_input = Input(shape = (self.height, self.width, self.channels))
         
-        discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_input)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
-        discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
-        discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
-        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
-        discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
-        discriminator_layer = Flatten()(discriminator_layer)
+        # discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_input)
+        # discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        # discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
+        # discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        # discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        # discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        # discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
+        # discriminator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        # discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        # discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        # discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
+        # discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_layer)
+        # discriminator_layer = BatchNormalization(momentum = 0.8)(discriminator_layer)
+        # discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        # discriminator_layer = Dropout(rate = 0.25)(discriminator_layer)
+        # discriminator_layer = Flatten()(discriminator_layer)
 
+        discriminator_input = self.resnet50.get_layer('avg_pool').output
+
+        discriminator_layer = Flatten()(discriminator_input)
+        
         discriminator_output = Dense(units = 1, activation = 'sigmoid')(discriminator_layer)
 
-        discriminator = Model(inputs = discriminator_input, outputs = discriminator_output)
+        discriminator = Model(inputs = self.resnet50.output, outputs = discriminator_output)
 
         # discriminator.summary()
 
@@ -171,8 +189,8 @@ class GAN():
 
         print('Training')
 
-        for j in range(1, epochs + 1):
-            for k in tqdm(range(1, self.datagenerator.__len__() + 1)):
+        for k in range(1, epochs + 1):
+            for l in tqdm(range(1, self.datagenerator.__len__() + 1)):
                 # Select images
                 side_image, front_image = self.datagenerator.__getitem__(k - 1)
 
@@ -192,20 +210,20 @@ class GAN():
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (j, k, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
 
-                record = (j, k, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (k, l, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
                 # # If at save interval -> save generated image samples
                 # if l % save_interval == 0:
-                #     self.save_image(front_image = front_image, side_image = side_image, epoch_number = j, batch_number = k, save_path = self.save_path)
+                #     self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
             # Save generated images and .h5
             if k % save_interval == 0:
-                self.save_image(front_image = front_image, side_image = side_image, epoch_number = j, batch_number = k, save_path = self.save_path)
+                self.save_image(front_image = front_image, side_image = side_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
                 # Check folder presence
                 if not os.path.isdir(self.save_path + 'H5/'):
