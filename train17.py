@@ -13,14 +13,14 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 16
+time = 17
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 epochs = 100
-batch_size = 16
+batch_size = 32
 save_interval = 1
 
 class GAN():
@@ -121,31 +121,22 @@ class GAN():
         return resnet50
 
     def build_generator(self):
-        generator_input = self.vgg16.get_layer('pool5').output
+        residual_input = self.vgg16.get_layer('conv3_3').output
 
-        # residual_input = self.vgg16.get_layer('conv3_3').output
+        # generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
+        # generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        # generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        # generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+        # generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        # generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        # generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+        # generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        # generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
 
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        for k in range(16):
+            residual_layer = self.residual_block(layer = residual_input, filters = 256, kernel_size = (3, 3), strides = (1, 1))
 
-        # residual_layer = generator_layer
-
-        # for k in range(16):
-        #     residual_layer = self.residual_block(layer = residual_layer, filters = 256, kernel_size = (3, 3), strides = (1, 1))
-
-        # generator_layer = add([generator_layer, residual_layer])
-
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-
-        # generator_layer = add([residual_input, generator_layer])  
-
-        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(residual_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
@@ -226,15 +217,16 @@ class GAN():
                 self.history.append(record)
 
                 # # If at save interval -> save generated image samples
-                # if m % save_interval == 0:
-                #     self.save_image(front_image = front_image, side_image = side_image, epoch_number = l, batch_number = m, save_path = self.save_path)
+                if l > 10 & m % save_interval == 0:
+                    self.save_image(front_image = front_image, side_image = side_image, epoch_number = l, batch_number = m, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
-            # Save generated images and .h5
-            if l % save_interval == 0:
+            if l <= 10 & l % save_interval == 0:
                 self.save_image(front_image = front_image, side_image = side_image, epoch_number = l, batch_number = m, save_path = self.save_path)
 
+            # Save.h5
+            if l % save_interval == 0:
                 # Check folder presence
                 if not os.path.isdir(self.save_path + 'H5/'):
                     os.makedirs(self.save_path + 'H5/')
