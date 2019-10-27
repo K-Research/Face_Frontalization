@@ -58,6 +58,7 @@ class GAN():
 
         # Save .json
         generator_model_json = self.generator.to_json()
+        resolution_model_json = self.resolution.to_json()        
 
         # Check folder presence
         if not os.path.isdir(self.save_path + 'Json/'):
@@ -65,6 +66,7 @@ class GAN():
 
         with open(self.save_path + 'Json/generator_model.json', "w") as json_file : 
             json_file.write(generator_model_json)
+            json_file.write(resolution_model_json)
 
         # The generator takes noise as input and generates imgs
         z = Input(shape = (self.height, self.width, self.channels))
