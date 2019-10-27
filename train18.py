@@ -46,44 +46,57 @@ class GAN():
         self.save_path = 'D:/Generated Image/Training' + str(time) + '/'
 
         # Build and compile the discriminator
-        self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
+        self.frontalization_discriminator = self.build_frontalization_discriminator()
+        self.frontalization_discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
+
+        self.resolution_discriminator = self.build_resolution_discriminator()
+        self.resolution_discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
 
         # Build and compile the generator
-        self.generator = self.build_generator()
+        self.frontalization_generator = self.build_generator()
 
         # Build and compile the resolution
-        self.resolution = self.build_resolution()
-        self.resolution.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
+        self.resolution_generator = self.build_resolution_generator()
+        self.resolution_generator.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
 
         # Save .json
-        generator_model_json = self.generator.to_json()
-        resolution_model_json = self.resolution.to_json()        
+        frontalization_generator_model_json = self.frontalization_generator.to_json()
+        resolution_generator_model_json = self.resolution_generator.to_json()        
 
         # Check folder presence
         if not os.path.isdir(self.save_path + 'Json/'):
             os.makedirs(self.save_path + 'Json/')
 
-        with open(self.save_path + 'Json/generator_model.json', "w") as json_file : 
-            json_file.write(generator_model_json)
-            json_file.write(resolution_model_json)
+        with open(self.save_path + 'Json/frontalization_generator_model.json', "w") as json_file :
+            json_file.write(frontalization_generator_model_json)
+
+        with open(self.save_path + 'Json/resolution_generator_model.json', "w") as json_file :         
+            json_file.write(resolution_generator_model_json)
 
         # The generator takes noise as input and generates imgs
         z = Input(shape = (self.height, self.width, self.channels))
-        image = self.generator(z)
+        frontalization_image = self.frontalization_generator(z)
+        resolution_image = self.resolution_generator(z)
 
         # For the combined model we will only train the generator
-        self.discriminator.trainable = False
+        self.frontalization_discriminator.trainable = False
+        
 
         # The discriminator takes generated images as input and determines validiy
-        valid = self.discriminator(image)
+        frontalization_valid = self.frontalization_discriminator(frontalization_image)
+        resolution_valid = self.resolution_discriminator(resolution_image)
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, [image, valid])
-        self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
+        self.frontalization_gan = Model(z, [frontalization_image, frontalization_valid])
+        self.frontalization_gan.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
-        # self.combined.summary()
+        # self.frontalization_gan.summary()
+
+        self.resolution_gan = Model(z, [resolution_image, resolution_valid])
+        self.resolution_gan.compile(loss = [self.vgg19_loss, 'binary_crossentropy'], loss_weights = [1., 1e-3], optimizer = self.optimizer)
+
+        # self.resolution_gan.summary()
 
     def residual_block(self, layer, filters, kernel_size, strides):
         residual_input = layer
@@ -155,8 +168,6 @@ class GAN():
         generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-
-
         generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
@@ -170,7 +181,7 @@ class GAN():
 
         return generator
 
-    def build_discriminator(self):
+    def build_frontalization_discriminator(self):
         # discriminator_input = Input(shape = (self.height, self.width, self.channels))
         
         # discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'valid')(discriminator_input)
@@ -202,43 +213,73 @@ class GAN():
 
         return discriminator
 
-    def build_resolution(self):
-        resolution_input = Input(shape = (self.height, self.width, self.channels))
+    def build_resolution_generator(self):
+        generator_input = Input(shape = (self.height, self.width, self.channels))
 
-        resolution_layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(resolution_input)
-        resolution_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(resolution_layer)
-        resolution_layer = MaxPooling2D(pool_size = (2, 2))(resolution_layer)
-        resolution_layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(resolution_layer)
-        resolution_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(resolution_layer)
-        resolution_layer = MaxPooling2D(pool_size = (2, 2))(resolution_layer)
-        resolution_layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(resolution_layer)
-        resolution_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(resolution_layer)
-        resolution_layer = MaxPooling2D(pool_size = (2, 2))(resolution_layer)
+        generator_layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_input)
+        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer)
+        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer)
+        generator_layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_layer)
+        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer)
+        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer)
+        generator_layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_layer)
+        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer)
+        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer)
 
         for k in range(16):
-            residual_layer = self.residual_block(layer = resolution_layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
+            residual_layer = self.residual_block(layer = generator_layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
 
-        resolution_layer = add([resolution_layer, residual_layer])
+        generator_layer = add([generator_layer, residual_layer])
 
-        resolution_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(resolution_layer)
-        resolution_layer = UpSampling2D(size = (2, 2))(resolution_layer)
-        resolution_layer = LeakyReLU(alpha = 0.2)(resolution_layer)
-        resolution_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(resolution_layer)
-        resolution_layer = UpSampling2D(size = (2, 2))(resolution_layer)
-        resolution_layer = LeakyReLU(alpha = 0.2)(resolution_layer)
-        resolution_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(resolution_layer)
-        resolution_layer = UpSampling2D(size = (2, 2))(resolution_layer)
-        resolution_layer = LeakyReLU(alpha = 0.2)(resolution_layer)
-        
-        resolution_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(resolution_layer)
+        generator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(generator_layer)
+        generator_layer = UpSampling2D(size = (2, 2))(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(generator_layer)
+        generator_layer = UpSampling2D(size = (2, 2))(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(generator_layer)
+        generator_layer = UpSampling2D(size = (2, 2))(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(generator_layer)
 
-        resolution_output = Activation('tanh')(resolution_layer)
+        generator_output = Activation('tanh')(generator_layer)
 
-        resolution = Model(inputs = resolution_input, outputs = resolution_output)
+        generator = Model(inputs = generator_input, outputs = generator_output)
 
-        # resolution.summary()
+        # generator.summary()
 
-        return resolution
+        return generator
+
+    def build_resolution_discriminator(self):
+        discriminator_input = Input(shape = (self.height, self.width, self.channels))
+
+        discriminator_layer = Conv2D(filters = 64, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_input)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 128, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_input)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(discriminator_layer)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Conv2D(filters = 512, kernel_size = (3, 3), strides = (2, 2), padding = 'same')(discriminator_input)
+        discriminator_layer = BatchNormalization(momentum = 0.5)(discriminator_layer)
+        discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Flatten()(discriminator_layer)
+        # discriminator_layer = Dense(units = 1024)(discriminator_layer)
+        # discriminator_layer = LeakyReLU(alpha = 0.2)(discriminator_layer)
+        discriminator_layer = Dense(units = 1)(discriminator_layer)
+
+        discriminator_output = Activation('sigmoid')(discriminator_layer)
+
+        discriminator = Model(inputs = discriminator_input, outputs = discriminator_output)
+
+        # discriminator.summary()
+
+        return discriminator        
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
@@ -254,27 +295,35 @@ class GAN():
                 # Select images
                 side_image, front_image = self.datagenerator.__getitem__(l - 1)
 
-                generated_image = self.generator.predict(side_image)
+                frontalization_generated_image = self.frontalization_generator.predict(side_image)
 
-                self.discriminator.trainable = True
+                resolution_generated_image = self.resolution_generator.predict(side_image)
+
+                self.frontalization_discriminator.trainable = True
+                self.resolution_discriminator.trainable = True
 
                 # Train the discriminator (real classified as ones and generated as zeros)
-                discriminator_fake_loss = self.discriminator.train_on_batch(generated_image, fake)
-                discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
-                discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
+                frontalization_discriminator_fake_loss = self.frontalization_discriminator.train_on_batch(frontalization_generated_image, fake)
+                frontalization_discriminator_real_loss = self.frontalization_discriminator.train_on_batch(front_image, real)
+                frontalization_discriminator_loss = 0.5 * np.add(frontalization_discriminator_fake_loss, frontalization_discriminator_real_loss)
+
+                resolution_discriminator_fake_loss = self.resolution_discriminator.train_on_batch(resolution_generated_image, fake)
+                resolution_discriminator_real_loss = self.resolution_discriminator.train_on_batch(front_image, real)
+                resolution_discriminator_loss = 0.5 * np.add(resolution_discriminator_fake_loss, resolution_discriminator_real_loss)
                 
-                self.discriminator.trainable = False
+                self.frontalization_discriminator.trainable = False
+                self.resolution_discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
+                frontalization_generator_loss = self.frontalization_gan.train_on_batch(side_image, [front_image, real])
 
-                resolution_loss = self.resolution.train_on_batch(generated_image, front_image)
+                resolution_generator_loss = self.resolution_gan.train_on_batch(frontalization_generated_image, [front_image, real])
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (l, m, frontalization_discriminator_loss[1] * 100, frontalization_discriminator_loss[0], frontalization_generator_loss[2]))
 
-                record = (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (l, m, frontalization_discriminator_loss[1] * 100, frontalization_discriminator_loss[0], frontalization_generator_loss[2])
                 self.history.append(record)
 
                 # # If at save interval -> save generated image samples
@@ -291,10 +340,10 @@ class GAN():
                 if not os.path.isdir(self.save_path + 'H5/'):
                     os.makedirs(self.save_path + 'H5/')
 
-                self.generator.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % l)
-                self.generator.save_weights(self.save_path + 'H5/' + 'generator_weights_epoch_%d.h5' % l)
-                self.resolution.save(self.save_path + 'H5/' + 'resolution_epoch_%d.h5' % l)
-                self.resolution.save_weights(self.save_path + 'H5/' + 'resolution_weights_epoch_%d.h5' % l)
+                self.frontalization_generator.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % l)
+                self.frontalization_generator.save_weights(self.save_path + 'H5/' + 'generator_weights_epoch_%d.h5' % l)
+                self.resolution_generator.save(self.save_path + 'H5/' + 'resolution_epoch_%d.h5' % l)
+                self.resolution_generator.save_weights(self.save_path + 'H5/' + 'resolution_weights_epoch_%d.h5' % l)
 
         self.history = np.array(self.history)
 
@@ -303,9 +352,9 @@ class GAN():
     def save_image(self, front_image, side_image, epoch_number, batch_number, save_path):
         # Rescale images 0 - 1
         # generated_image = 0.5 * self.generator.predict(side_image) + 0.5
-        generated_image = self.generator.predict(side_image)
+        frontalization_generated_image = self.frontalization_generator.predict(side_image)
 
-        resolution_image = 0.5 * self.resolution.predict(generated_image) + 0.5
+        resolution_generated_image = 0.5 * self.resolution_generator.predict(frontalization_generated_image) + 0.5
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
@@ -320,7 +369,7 @@ class GAN():
             for n in range(self.n_show_image):
                 generated_image_plot = plt.subplot(1, 3, n + 1 + (2 * self.n_show_image))
                 generated_image_plot.set_title('Generated image (front image)')
-                plt.imshow(resolution_image[m,  :  ,  :  ,  : ])
+                plt.imshow(resolution_generated_image[m,  :  ,  :  ,  : ])
 
                 original_front_face_image_plot = plt.subplot(1, 3, n + 1 + self.n_show_image)
                 original_front_face_image_plot.set_title('Origninal front image')
