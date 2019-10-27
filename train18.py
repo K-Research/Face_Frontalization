@@ -2,7 +2,9 @@ from __future__ import print_function, division
 
 from datagenerator_read_dir_face import DataGenerator
 from glob import glob
-from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, Reshape
+from keras.applications.vgg19 import VGG19
+import keras.backend as K
+from keras.layers import Activation, add, BatchNormalization, Conv2D, Conv2DTranspose, Dense, Dropout, Flatten, Input, MaxPooling2D, Reshape, UpSampling2D
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.models import Model, Sequential
 from keras.optimizers import Adam
@@ -13,14 +15,14 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 17
+time = 18
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 epochs = 100
-batch_size = 32
+batch_size = 16
 save_interval = 1
 
 class GAN():
@@ -49,6 +51,10 @@ class GAN():
 
         # Build and compile the generator
         self.generator = self.build_generator()
+
+        # Build and compile the resolution
+        self.resolution = self.build_resolution()
+        self.resolution.compile(loss = self.vgg19_loss, optimizer = self.optimizer)
 
         # Save .json
         generator_model_json = self.generator.to_json()
@@ -91,6 +97,21 @@ class GAN():
         residual_model = add([residual_input, residual_output])
 
         return residual_model
+
+    # computes VGG loss or content loss
+    def vgg19_loss(self, true, prediction):
+        vgg19 = VGG19(include_top = False, weights = 'imagenet', input_shape = (self.height, self.width, self.channels))
+        # Make trainable as False
+
+        vgg19.trainable = False
+
+        for layer in vgg19.layers:
+            layer.trainable = False
+        
+        model = Model(inputs = vgg19.input, outputs = vgg19.get_layer('block5_conv4').output)
+        model.trainable = False
+
+        return K.mean(K.square(model(true) - model(prediction)))
         
     def build_vgg16(self):
         vgg16 = VGGFace(include_top = False, model = 'vgg16', weights = 'vggface', input_shape = (self.height, self.width, self.channels))
@@ -121,23 +142,20 @@ class GAN():
         return resnet50
 
     def build_generator(self):
-        residual_input = self.vgg16.get_layer('conv4_3').output
+        generator_input = self.vgg16.get_layer('pool5').output
 
-        # generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
-        # generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        # generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        # generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
-        # generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        # generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-
-        for k in range(16):
-            residual_layer = self.residual_block(layer = residual_input, filters = 512, kernel_size = (3, 3), strides = (1, 1))
-
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(residual_layer)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
 
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+
+        generator_layer = Conv2DTranspose(filters = 64, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
@@ -182,6 +200,44 @@ class GAN():
 
         return discriminator
 
+    def build_resolution(self):
+        resolution_input = Input(shape = (self.height, self.width, self.channels))
+
+        resolution_layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(resolution_input)
+        resolution_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(resolution_layer)
+        resolution_layer = MaxPooling2D(pool_size = (2, 2))(resolution_layer)
+        resolution_layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(resolution_layer)
+        resolution_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(resolution_layer)
+        resolution_layer = MaxPooling2D(pool_size = (2, 2))(resolution_layer)
+        resolution_layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(resolution_layer)
+        resolution_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(resolution_layer)
+        resolution_layer = MaxPooling2D(pool_size = (2, 2))(resolution_layer)
+
+        for k in range(16):
+            residual_layer = self.residual_block(layer = resolution_layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
+
+        resolution_layer = add([resolution_layer, residual_layer])
+
+        resolution_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(resolution_layer)
+        resolution_layer = UpSampling2D(size = (2, 2))(resolution_layer)
+        resolution_layer = LeakyReLU(alpha = 0.2)(resolution_layer)
+        resolution_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(resolution_layer)
+        resolution_layer = UpSampling2D(size = (2, 2))(resolution_layer)
+        resolution_layer = LeakyReLU(alpha = 0.2)(resolution_layer)
+        resolution_layer = Conv2D(filters = 256, kernel_size = (3, 3), strides = (1, 1), padding = 'same')(resolution_layer)
+        resolution_layer = UpSampling2D(size = (2, 2))(resolution_layer)
+        resolution_layer = LeakyReLU(alpha = 0.2)(resolution_layer)
+        
+        resolution_layer = Conv2D(filters = self.channels, kernel_size = (9, 9), strides = (1, 1), padding = 'same')(resolution_layer)
+
+        resolution_output = Activation('tanh')(resolution_layer)
+
+        resolution = Model(inputs = resolution_input, outputs = resolution_output)
+
+        # resolution.summary()
+
+        return resolution
+
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
         # fake = np.zeros((batch_size, 1))
@@ -210,6 +266,8 @@ class GAN():
                 # Train the generator (wants discriminator to mistake images as real)
                 generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
 
+                resolution_loss = self.resolution.train_on_batch(generated_image, front_image)
+
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
                         % (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
@@ -217,23 +275,24 @@ class GAN():
                 record = (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
                 self.history.append(record)
 
-                # If at save interval -> save generated image samples
-                if l > 10 and m % save_interval == 0:
-                    self.save_image(front_image = front_image, side_image = side_image, epoch_number = l, batch_number = m, save_path = self.save_path)
+                # # If at save interval -> save generated image samples
+                # if m % save_interval == 0:
+                #     self.save_image(front_image = front_image, side_image = side_image, epoch_number = l, batch_number = m, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
 
-            if l <= 10 and l % save_interval == 0:
+            # Save generated images and .h5
+            if l % save_interval == 0:
                 self.save_image(front_image = front_image, side_image = side_image, epoch_number = l, batch_number = m, save_path = self.save_path)
 
-            # Save .h5
-            if l % save_interval == 0:
                 # Check folder presence
                 if not os.path.isdir(self.save_path + 'H5/'):
                     os.makedirs(self.save_path + 'H5/')
 
                 self.generator.save(self.save_path + 'H5/' + 'generator_epoch_%d.h5' % l)
                 self.generator.save_weights(self.save_path + 'H5/' + 'generator_weights_epoch_%d.h5' % l)
+                self.resolution.save(self.save_path + 'H5/' + 'resolution_epoch_%d.h5' % l)
+                self.resolution.save_weights(self.save_path + 'H5/' + 'resolution_weights_epoch_%d.h5' % l)
 
         self.history = np.array(self.history)
 
@@ -241,7 +300,10 @@ class GAN():
 
     def save_image(self, front_image, side_image, epoch_number, batch_number, save_path):
         # Rescale images 0 - 1
-        generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+        # generated_image = 0.5 * self.generator.predict(side_image) + 0.5
+        generated_image = self.generator.predict(side_image)
+
+        resolution_image = 0.5 * self.resolution.predict(generated_image) + 0.5
 
         front_image = (127.5 * (front_image + 1)).astype(np.uint8)
         side_image = (127.5 * (side_image + 1)).astype(np.uint8)
@@ -256,7 +318,7 @@ class GAN():
             for n in range(self.n_show_image):
                 generated_image_plot = plt.subplot(1, 3, n + 1 + (2 * self.n_show_image))
                 generated_image_plot.set_title('Generated image (front image)')
-                plt.imshow(generated_image[m,  :  ,  :  ,  : ])
+                plt.imshow(resolution_image[m,  :  ,  :  ,  : ])
 
                 original_front_face_image_plot = plt.subplot(1, 3, n + 1 + self.n_show_image)
                 original_front_face_image_plot.set_title('Origninal front image')
