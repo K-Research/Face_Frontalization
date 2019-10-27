@@ -316,7 +316,6 @@ class GAN():
 
                 # Train the generator (wants discriminator to mistake images as real)
                 frontalization_generator_loss = self.frontalization_gan.train_on_batch(side_image, [front_image, real])
-
                 resolution_generator_loss = self.resolution_gan.train_on_batch(frontalization_generated_image, [front_image, real])
 
                 # Plot the progress
