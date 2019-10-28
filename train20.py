@@ -167,7 +167,6 @@ class GAN():
                 discriminator_real_loss = self.discriminator.train_on_batch(front_image, real)
                 discriminator_loss = 0.5 * np.add(discriminator_fake_loss, discriminator_real_loss)
 
-                
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
