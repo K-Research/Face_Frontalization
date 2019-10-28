@@ -53,7 +53,7 @@ class GAN():
         self.resolution_discriminator.compile(loss = 'binary_crossentropy', optimizer = self.optimizer, metrics = ['accuracy'])
 
         # Build and compile the generator
-        self.frontalization_generator = self.build_generator()
+        self.frontalization_generator = self.build_frontalization_generator()
 
         # Build and compile the resolution
         self.resolution_generator = self.build_resolution_generator()
@@ -70,7 +70,7 @@ class GAN():
         with open(self.save_path + 'Json/frontalization_generator_model.json', "w") as json_file :
             json_file.write(frontalization_generator_model_json)
 
-        with open(self.save_path + 'Json/resolution_generator_model.json', "w") as json_file :        
+        with open(self.save_path + 'Json/resolution_generator_model.json', "w") as json_file :
             json_file.write(resolution_generator_model_json)
 
         # The generator takes noise as input and generates imgs
@@ -80,7 +80,7 @@ class GAN():
 
         # For the combined model we will only train the generator
         self.frontalization_discriminator.trainable = False
-        
+        self.resolution_discriminator.trainable = False
 
         # The discriminator takes generated images as input and determines validiy
         frontalization_valid = self.frontalization_discriminator(frontalization_image)
@@ -156,7 +156,7 @@ class GAN():
 
         return resnet50
 
-    def build_generator(self):
+    def build_frontalization_generator(self):
         generator_input = self.vgg16.get_layer('pool5').output
 
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
