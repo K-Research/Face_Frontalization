@@ -197,18 +197,18 @@ class GAN():
     def build_resolution_generator(self):
         generator_input = Input(shape = (self.height, self.width, self.channels))
 
-        generator_layer = Conv2D(filters = 16, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_input)
-        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer)
-        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer)
-        generator_layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_layer)
+        generator_layer = Conv2D(filters = 32, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_input)
         generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer)
         generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer)
         generator_layer = Conv2D(filters = 64, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_layer)
         generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer)
         generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer)
+        generator_layer = Conv2D(filters = 128, kernel_size = (2, 2), strides = (1, 1), padding = 'same')(generator_layer)
+        generator_layer = PReLU(alpha_initializer = 'zeros', alpha_regularizer = None, alpha_constraint = None, shared_axes = [1, 2])(generator_layer)
+        generator_layer = MaxPooling2D(pool_size = (2, 2))(generator_layer)
 
         for k in range(16):
-            residual_layer = self.residual_block(layer = generator_layer, filters = 64, kernel_size = (3, 3), strides = (1, 1))
+            residual_layer = self.residual_block(layer = generator_layer, filters = 128, kernel_size = (3, 3), strides = (1, 1))
 
         generator_layer = add([generator_layer, residual_layer])
 
@@ -264,8 +264,6 @@ class GAN():
 
     def train(self, epochs, batch_size, save_interval):
         # Adversarial ground truths
-        # fake = np.zeros((batch_size, 1))
-        # real = np.ones((batch_size, 1))
         fake = np.random.random_sample((batch_size, 1)) * 0.2
         real = np.ones((batch_size, 1)) - np.random.random_sample((batch_size, 1)) * 0.2
 
