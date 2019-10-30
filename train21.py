@@ -194,7 +194,7 @@ class GAN():
 
                 frontalization_generated_image = self.frontalization_generator.predict(side_image)
 
-                resolution_generated_image = self.resolution_generator.predict(side_image)
+                resolution_generated_image = self.resolution_generator.predict(frontalization_generated_image)
 
                 self.resolution_discriminator.trainable = True
 
