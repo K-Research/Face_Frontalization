@@ -133,7 +133,9 @@ class Autoencoder():
 
             # If at save interval -> save generated image samples
             if k % save_interval == 0:
-                self.save_test_image(epoch_number = k, batch_number = l, save_path = self.save_path)
+                test_side_image, test_front_image = self.datagenerator_predict.__getitem__(k - 1)
+
+                self.save_test_image(side_image = test_side_image, front_image = test_front_image, epoch_number = k, batch_number = l, save_path = self.save_path)
 
             self.datagenerator.on_epoch_end()
             self.datagenerator_predict.on_epoch_end()
@@ -151,9 +153,7 @@ class Autoencoder():
 
         self.graph(history = self.history, save_path = self.save_path + 'History/')
 
-    def save_test_image(self, epoch_number, batch_number, save_path):
-        side_image, front_image = self.datagenerator_predict.__getitem__(k - 1)  
-
+    def save_test_image(self, side_image, front_image, epoch_number, batch_number, save_path):
         # Rescale images 0 - 1
         generated_image = 0.5 * self.autoencoder.predict(side_image) + 0.5
 
