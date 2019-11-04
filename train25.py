@@ -13,7 +13,7 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 24
+time = 25
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
@@ -72,7 +72,7 @@ class GAN():
 
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
-        self.combined = Model(z, [image, valid])
+        self.combined = Model(z, valid)
         self.combined.compile(loss = 'binary_crossentropy', optimizer = self.optimizer)
 
         # self.combined.summary()
@@ -121,12 +121,9 @@ class GAN():
         return resnet50
 
     def build_generator(self):
-        residual_input = self.vgg16.get_layer('pool5').output
+        generator_input = self.vgg16.get_layer('pool5').output
 
-        for k in range(16):
-            residual_layer = self.residual_block(layer = residual_input, filters = 512, kernel_size = (3, 3), strides = (1, 1))
-
-        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(residual_layer)
+        generator_layer = Conv2DTranspose(filters = 1024, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
@@ -185,13 +182,13 @@ class GAN():
                 self.discriminator.trainable = False
 
                 # Train the generator (wants discriminator to mistake images as real)
-                generator_loss = self.combined.train_on_batch(side_image, [front_image, real])
+                generator_loss = self.combined.train_on_batch(side_image, real)
 
                 # Plot the progress
                 print ('\nTraining epoch : %d \nTraining batch : %d \nAccuracy of discriminator : %.2f%% \nLoss of discriminator : %f \nLoss of generator : %f ' 
-                        % (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2]))
+                        % (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss))
 
-                record = (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss[2])
+                record = (l, m, discriminator_loss[1] * 100, discriminator_loss[0], generator_loss)
                 self.history.append(record)
 
                 # If at save interval -> save generated image samples
