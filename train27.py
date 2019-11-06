@@ -121,25 +121,25 @@ class GAN():
         return resnet50
 
     def build_generator(self):
-        residual_input = self.vgg16.get_layer('conv3_3').output
+        residual_input = self.vgg16.get_layer('conv4_3').output
 
         for k in range(16):
-            residual_layer = self.residual_block(layer = residual_input, filters = 256, kernel_size = (3, 3), strides = (1, 1))
+            residual_layer = self.residual_block(layer = residual_input, filters = 512, kernel_size = (3, 3), strides = (1, 1))
 
         generator_input = add([residual_input, residual_layer])
 
-        generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
+        generator_layer = Conv2DTranspose(filters = 512, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_input)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = 256, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
         generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
         generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
-        generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
-        generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
-        generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        # generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+        # generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        # generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
+        # generator_layer = Conv2DTranspose(filters = 128, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
+        # generator_layer = BatchNormalization(momentum = 0.8)(generator_layer)
+        # generator_layer = LeakyReLU(alpha = 0.2)(generator_layer)
         generator_layer = Conv2DTranspose(filters = self.channels, kernel_size = (4, 4), strides = (2, 2), padding = 'same')(generator_layer)
 
         generator_output = Activation('tanh')(generator_layer)
