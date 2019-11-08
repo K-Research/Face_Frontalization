@@ -13,14 +13,14 @@ import os
 import sys
 from tqdm import tqdm
 
-time = 28
+time = 29
 
 # Load data
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
 epochs = 100
-batch_size = 16
+batch_size = 8
 save_interval = 1
 
 class GAN():
