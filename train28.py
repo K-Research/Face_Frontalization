@@ -19,7 +19,7 @@ time = 29
 X_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/X/*jpg')
 Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X3 filtering/Y/*jpg')
 
-epochs = 100
+epochs = 1000
 batch_size = 8
 save_interval = 1
 
