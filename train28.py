@@ -21,7 +21,7 @@ Y_train = glob('D:/Bitcamp/Project/Frontalization/Imagenius/Data/Korean 224X224X
 
 epochs = 1000
 batch_size = 8
-save_interval = 1
+save_interval = 10
 
 class GAN():
     def __init__(self):
